@@ -353,6 +353,35 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </select>
             </div>
 
+            {/* USER SELECTOR SHORTCUT FROM SPREADSHEET */}
+            {collaborators.length > 1 && (
+              <div>
+                <label className="block font-medium text-zinc-300 mb-1 flex items-center justify-between">
+                  <span>Selecionar Usuário Criado na Planilha:</span>
+                  <span className="text-[10px] text-emerald-400 font-mono">Auto-preenchimento</span>
+                </label>
+                <select
+                  onChange={e => {
+                    const found = collaborators.find(c => c.username === e.target.value || c.id === e.target.value);
+                    if (found) {
+                      setUsername(found.username);
+                      setPin(found.pin);
+                      if (found.assignedDock) setSelectedDock(found.assignedDock);
+                    }
+                  }}
+                  defaultValue=""
+                  className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-zinc-100 font-mono focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="" disabled>-- Escolha um usuário da planilha --</option>
+                  {collaborators.map(c => (
+                    <option key={c.id} value={c.username}>
+                      {c.name} (@{c.username}) &bull; PIN: {c.pin} &bull; {c.role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* USERNAME OR EMAIL */}
             <div>
               <label className="block font-medium text-zinc-200 mb-1 flex items-center gap-1.5">
@@ -369,20 +398,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               />
             </div>
 
-            {/* PIN CODE */}
+            {/* PIN / SENHA */}
             <div>
               <label className="block font-medium text-zinc-200 mb-1 flex items-center gap-1.5">
                 <Key className="w-3.5 h-3.5 text-zinc-400" />
-                <span>PIN de Segurança (4 a 6 dígitos) *</span>
+                <span>Senha Master ou PIN de Doca *</span>
               </label>
               <input
                 type="password"
                 required
-                maxLength={6}
                 value={pin}
                 onChange={e => setPin(e.target.value)}
-                placeholder="415263 ou 1234"
-                className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-400 font-mono tracking-widest"
+                placeholder="Gili2112#@ ou PIN"
+                className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-400 font-mono tracking-wider"
               />
             </div>
 
@@ -392,7 +420,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               className="w-full py-3 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
-              <span>{loading ? 'Acessando...' : 'Entrar com PIN'}</span>
+              <span>{loading ? 'Acessando...' : 'Entrar com Senha / PIN'}</span>
             </button>
           </form>
         )}
@@ -401,7 +429,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         <div className="pt-3 border-t border-zinc-850 space-y-2 text-xs">
           <div className="flex items-center justify-between text-[11px] text-zinc-400 font-semibold">
             <span>Atalhos de Acesso Rápido:</span>
-            <span className="font-mono text-[10px]">PIN Master: 415263</span>
+            <span className="font-mono text-[10px] text-amber-300 font-bold">Senha Master: Gili2112#@</span>
           </div>
 
           {/* MASTER USER BUTTON */}

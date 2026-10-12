@@ -233,6 +233,67 @@ export async function deleteCollaborator(id: string): Promise<void> {
   }
 }
 
+export async function batchSaveCollaborators(
+  collaborators: Array<{
+    name: string;
+    username: string;
+    pin: string;
+    role?: string;
+    email?: string;
+    assignedDock?: string | null;
+    permissions?: any;
+  }>
+): Promise<{ success: boolean; createdCount: number; updatedCount: number; total: number }> {
+  const res = await fetch(`${API_BASE}/collaborators/batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ collaborators }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.error || 'Falha ao salvar planilha de logins');
+  }
+  return res.json();
+}
+
+export async function batchUpdateDocks(
+  docks: Array<{
+    id?: string;
+    number?: number;
+    name?: string;
+    activeOperatorName?: string | null;
+    status?: string;
+    pausedReason?: string | null;
+  }>
+): Promise<{ success: boolean; docks: DockConfig[] }> {
+  const res = await fetch(`${API_BASE}/docks/batch-update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ docks }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.error || 'Falha ao atualizar planilha das docas');
+  }
+  return res.json();
+}
+
+export async function batchSaveFormsSheet(
+  items: Array<Partial<DriverCheckIn>>,
+  date?: string
+): Promise<{ success: boolean; addedCount: number; updatedCount: number; total: number; checkIns: DriverCheckIn[] }> {
+  const res = await fetch(`${API_BASE}/forms-sheet/batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items, date }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.error || 'Falha ao salvar alimentação do Forms');
+  }
+  return res.json();
+}
+
 export async function loginCollaborator(
   username: string,
   pin: string,

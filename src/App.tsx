@@ -509,6 +509,7 @@ export default function App() {
                   currentCheckIns={checkIns}
                   onRefresh={loadInitialData}
                   isAdmin={canAccessSpreadsheet}
+                  docks={docks}
                 />
               ) : (
                 <div className="max-w-md mx-auto px-4 py-16 text-center space-y-4">
@@ -538,6 +539,7 @@ export default function App() {
                   onSelectUser={user => {
                     setCurrentUser(user);
                   }}
+                  docks={docks}
                 />
               ) : (
                 <div className="max-w-md mx-auto px-4 py-16 text-center space-y-4">

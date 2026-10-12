@@ -114,8 +114,8 @@ function getInitialData(): DbStore {
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date();
 
-  // 10 Initial Docks
-  const docks = Array.from({ length: 10 }, (_, i) => ({
+  // 8 Initial Pre-defined Docks
+  const docks = Array.from({ length: 8 }, (_, i) => ({
     id: `dock-${i + 1}`,
     number: i + 1,
     name: `Doca ${String(i + 1).padStart(2, '0')}`,
@@ -125,7 +125,7 @@ function getInitialData(): DbStore {
     currentTicketNumber: null as number | null,
     currentRoute: null as string | null,
     callStartedAt: null as string | null,
-    activeOperatorName: null as string | null,
+    activeOperatorName: i === 0 ? 'Lucas Ferreira' : i === 1 ? 'Fernando Guarita' : i === 2 ? 'Patrícia Rocha' : null as string | null,
     isPaused: false,
     pausedReason: null as string | null,
     pausedAt: null as string | null,
@@ -140,7 +140,7 @@ function getInitialData(): DbStore {
       role: 'master' as const,
       isAdmin: true,
       isMaster: true,
-      pin: '415263',
+      pin: 'Gili2112#@',
       email: 'gilianocosta804@gmail.com',
       active: true,
       assignedDock: null,
@@ -528,7 +528,7 @@ function getInitialData(): DbStore {
       enforceBaseGeofence: false,
       autoVoiceCall: true,
       soundAlerts: true,
-      totalDocks: 10,
+      totalDocks: 8,
       masterGoogle: {
         connected: true,
         email: 'gilianocosta804@gmail.com',
@@ -609,6 +609,48 @@ try {
 } catch (err) {
   console.error('Failed reading data file, using fresh initial seed:', err);
   db = getInitialData();
+}
+
+// Ensure Master Giliano Costa always has updated credentials
+const masterIdx = db.collaborators.findIndex(
+  c => c.isMaster || c.role === 'master' || c.email === 'gilianocosta804@gmail.com' || c.name.includes('Giliano')
+);
+if (masterIdx !== -1) {
+  db.collaborators[masterIdx].email = 'gilianocosta804@gmail.com';
+  db.collaborators[masterIdx].username = 'gilianocosta804@gmail.com';
+  db.collaborators[masterIdx].pin = 'Gili2112#@';
+  db.collaborators[masterIdx].isMaster = true;
+  db.collaborators[masterIdx].isAdmin = true;
+  db.collaborators[masterIdx].role = 'master';
+  db.collaborators[masterIdx].permissions = {
+    canViewSpreadsheet: true,
+    canManageUsers: true,
+    canCallDrivers: true,
+    canCollectPackages: true,
+    canConfigureDocks: true,
+    canMovePackages: true,
+    canUseChat: true,
+    canConsultCep: true,
+  };
+  saveDb();
+}
+
+// Ensure exactly 8 pre-defined docks (Doca 01 to Doca 08)
+if (!db.docks || db.docks.length !== 8) {
+  const default8Docks = [
+    { id: 'dock-1', number: 1, name: 'Doca 01', status: 'occupied' as const, currentCheckInId: 'chk-1', currentDriverName: 'Marcos Vinícius Silva', currentTicketNumber: 1, currentRoute: '01A', callStartedAt: null, activeOperatorName: 'Lucas Ferreira', isPaused: false, pausedReason: null, pausedAt: null },
+    { id: 'dock-2', number: 2, name: 'Doca 02', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: 'Fernando Guarita', isPaused: false, pausedReason: null, pausedAt: null },
+    { id: 'dock-3', number: 3, name: 'Doca 03', status: 'calling' as const, currentCheckInId: 'chk-2', currentDriverName: 'Anderson Pereira Gomes', currentTicketNumber: 2, currentRoute: '16A', callStartedAt: new Date(Date.now() - 5 * 60000).toISOString(), activeOperatorName: 'Patrícia Rocha', isPaused: false, pausedReason: null, pausedAt: null },
+    { id: 'dock-4', number: 4, name: 'Doca 04', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: null, isPaused: false, pausedReason: null, pausedAt: null },
+    { id: 'dock-5', number: 5, name: 'Doca 05', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: null, isPaused: false, pausedReason: null, pausedAt: null },
+    { id: 'dock-6', number: 6, name: 'Doca 06', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: null, isPaused: false, pausedReason: null, pausedAt: null },
+    { id: 'dock-7', number: 7, name: 'Doca 07', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: null, isPaused: false, pausedReason: null, pausedAt: null },
+    { id: 'dock-8', number: 8, name: 'Doca 08', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: null, isPaused: false, pausedReason: null, pausedAt: null },
+  ];
+
+  db.docks = default8Docks;
+  db.settings.totalDocks = 8;
+  saveDb();
 }
 
 // Ensure messages array exists
@@ -756,15 +798,15 @@ async function startServer() {
     let user = db.collaborators.find(
       u =>
         (u.username.toLowerCase() === input || u.email?.toLowerCase() === input) &&
-        (u.pin === pin || (u.isMaster && (pin === '415263' || pin === '1234'))) &&
+        (u.pin === pin || (u.isMaster && (pin === 'Gili2112#@' || pin === '415263' || pin === '1234'))) &&
         u.active
     );
 
     // Fallback: se o login for do próprio Giliano Costa pelo email ou nome de usuário
-    if (!user && (input === 'gilianocosta804@gmail.com' || input === 'giliano')) {
+    if (!user && (input === 'gilianocosta804@gmail.com' || input === 'giliano' || input.includes('gilianocosta'))) {
       user = db.collaborators.find(u => u.isMaster || u.email === 'gilianocosta804@gmail.com');
-      if (user && (pin === '415263' || pin === '1234')) {
-        // Aceita o PIN
+      if (user && (pin === 'Gili2112#@' || pin === '415263' || pin === '1234')) {
+        // Aceita a senha
       } else {
         user = undefined;
       }
@@ -774,18 +816,23 @@ async function startServer() {
       return res.status(401).json({ error: 'Credenciais inválidas ou usuário inativo.' });
     }
 
-    // Se for o usuário Master Giliano Costa, garante todas as permissões ativas
+    // Se for o usuário Master Giliano Costa, garante todas as permissões ativas e senha Gili2112#@
     if (user.isMaster || user.role === 'master' || user.email === 'gilianocosta804@gmail.com') {
       user.isMaster = true;
       user.isAdmin = true;
       user.role = 'master';
       user.email = 'gilianocosta804@gmail.com';
+      user.username = 'gilianocosta804@gmail.com';
+      user.pin = 'Gili2112#@';
       user.permissions = {
         canViewSpreadsheet: true,
         canManageUsers: true,
         canCallDrivers: true,
         canCollectPackages: true,
         canConfigureDocks: true,
+        canMovePackages: true,
+        canUseChat: true,
+        canConsultCep: true,
       };
     }
 
@@ -854,7 +901,7 @@ async function startServer() {
         role: 'master' as const,
         isAdmin: true,
         isMaster: true,
-        pin: '415263',
+        pin: 'Gili2112#@',
         email: rawEmail,
         active: true,
         assignedDock,
@@ -878,6 +925,7 @@ async function startServer() {
       user.isMaster = true;
       user.isAdmin = true;
       user.role = 'master';
+      user.pin = 'Gili2112#@';
       user.active = true;
       user.assignedDock = assignedDock;
       user.permissions = {
@@ -1008,6 +1056,368 @@ async function startServer() {
     saveDb();
     broadcastEvent('collaborators_updated', db.collaborators);
     res.json({ success: true });
+  });
+
+  // Batch create/update logins directly from Spreadsheet mode
+  app.post('/api/collaborators/batch', (req: Request, res: Response) => {
+    const list = Array.isArray(req.body) ? req.body : req.body.collaborators;
+    if (!Array.isArray(list) || list.length === 0) {
+      return res.status(400).json({ error: 'Nenhum dado de login fornecido para salvar.' });
+    }
+
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const item of list) {
+      if (!item.name && !item.username && !item.email) continue;
+      const cleanName = String(item.name || item.username || item.email || 'Colaborador').trim();
+      let cleanUsername = String(
+        item.username || item.email || cleanName.toLowerCase().replace(/\s+/g, '.')
+      ).trim().toLowerCase();
+      const cleanPin = String(item.pin || item.password || '1234').trim();
+      const cleanEmail = String(item.email || (cleanUsername.includes('@') ? cleanUsername : '')).trim();
+      const role = item.role === 'admin' || item.role === 'master' ? item.role : 'colaborador';
+      const isAdmin = role === 'admin' || role === 'master';
+      const isMaster =
+        role === 'master' ||
+        cleanEmail === 'gilianocosta804@gmail.com' ||
+        cleanUsername === 'gilianocosta804@gmail.com';
+
+      const existingIndex = db.collaborators.findIndex(
+        c =>
+          c.username.toLowerCase() === cleanUsername.toLowerCase() ||
+          (cleanEmail && c.email?.toLowerCase() === cleanEmail.toLowerCase())
+      );
+
+      const defaultPermissions = {
+        canViewSpreadsheet: isAdmin,
+        canManageUsers: isAdmin,
+        canCallDrivers: true,
+        canCollectPackages: true,
+        canConfigureDocks: isAdmin,
+        canMovePackages: isAdmin || Boolean(item.permissions?.canMovePackages),
+        canUseChat: isAdmin || Boolean(item.permissions?.canUseChat),
+        canConsultCep: isAdmin || Boolean(item.permissions?.canConsultCep),
+      };
+
+      const finalPermissions = item.permissions
+        ? { ...defaultPermissions, ...item.permissions }
+        : defaultPermissions;
+
+      if (existingIndex !== -1) {
+        db.collaborators[existingIndex] = {
+          ...db.collaborators[existingIndex],
+          name: cleanName,
+          pin: cleanPin,
+          role: isMaster ? 'master' : role,
+          isAdmin: isMaster || isAdmin,
+          isMaster: isMaster || Boolean(db.collaborators[existingIndex].isMaster),
+          email: cleanEmail || db.collaborators[existingIndex].email,
+          assignedDock:
+            item.assignedDock !== undefined
+              ? item.assignedDock
+              : db.collaborators[existingIndex].assignedDock,
+          permissions: finalPermissions,
+        };
+        updatedCount++;
+      } else {
+        const newCollab = {
+          id: `collab-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          name: cleanName,
+          username: cleanUsername,
+          role: isMaster ? 'master' : role,
+          isAdmin: isMaster || isAdmin,
+          isMaster,
+          pin: cleanPin,
+          email: cleanEmail,
+          active: true,
+          assignedDock: item.assignedDock || 'Doca 01',
+          permissions: finalPermissions,
+          createdAt: new Date().toISOString().slice(0, 10),
+        };
+        db.collaborators.push(newCollab);
+        createdCount++;
+      }
+    }
+
+    saveDb();
+    broadcastEvent('collaborators_updated', db.collaborators);
+    res.json({ success: true, createdCount, updatedCount, total: db.collaborators.length });
+  });
+
+  // Export Logins Spreadsheet (CSV format for Excel / Google Sheets)
+  app.get('/api/collaborators-sheet/csv', (_req: Request, res: Response) => {
+    const headers = [
+      'Nome Completo',
+      'Usuario / Login',
+      'Senha / PIN',
+      'Perfil',
+      'Doca Alocada',
+      'Email',
+      'Permissao Pacotes',
+      'Permissao Chat',
+      'Permissao CEP',
+      'Permissao Planilha',
+    ];
+
+    const rows = db.collaborators.map(c => [
+      `"${(c.name || '').replace(/"/g, '""')}"`,
+      `"${(c.username || '').replace(/"/g, '""')}"`,
+      `"${(c.pin || '').replace(/"/g, '""')}"`,
+      `"${c.role || 'colaborador'}"`,
+      `"${c.assignedDock || 'Geral'}"`,
+      `"${c.email || ''}"`,
+      c.permissions?.canMovePackages ? 'SIM' : 'NAO',
+      c.permissions?.canUseChat ? 'SIM' : 'NAO',
+      c.permissions?.canConsultCep ? 'SIM' : 'NAO',
+      c.permissions?.canViewSpreadsheet ? 'SIM' : 'NAO',
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="planilha_logins_docas_${new Date().toISOString().slice(0, 10)}.csv"`
+    );
+    res.send(csvContent);
+  });
+
+  // Batch update Docks directly from Spreadsheet mode
+  app.post('/api/docks/batch-update', (req: Request, res: Response) => {
+    const list = Array.isArray(req.body) ? req.body : req.body.docks;
+    if (!Array.isArray(list)) {
+      return res.status(400).json({ error: 'Lista de docas inválida' });
+    }
+
+    for (const item of list) {
+      const dock = db.docks.find(
+        d => d.id === item.id || d.number === item.number || d.name === item.name
+      );
+      if (dock) {
+        if (item.name) dock.name = item.name.trim();
+        if (item.activeOperatorName !== undefined) {
+          dock.activeOperatorName = item.activeOperatorName ? item.activeOperatorName.trim() : null;
+        }
+        if (
+          item.status &&
+          ['free', 'calling', 'occupied', 'paused', 'maintenance'].includes(item.status)
+        ) {
+          dock.status = item.status;
+        }
+        if (item.pausedReason !== undefined) dock.pausedReason = item.pausedReason;
+      }
+    }
+
+    saveDb();
+    broadcastEvent('docks_updated', db.docks);
+    res.json({ success: true, docks: db.docks });
+  });
+
+  // Reset/Guarantee exactly 8 pre-defined operational docks (Doca 01 to Doca 08)
+  app.post('/api/docks/reset-default-8', (_req: Request, res: Response) => {
+    const predefined8 = [
+      { id: 'dock-1', number: 1, name: 'Doca 01', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: 'Lucas Ferreira', isPaused: false, pausedReason: null, pausedAt: null },
+      { id: 'dock-2', number: 2, name: 'Doca 02', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: 'Fernando Guarita', isPaused: false, pausedReason: null, pausedAt: null },
+      { id: 'dock-3', number: 3, name: 'Doca 03', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: 'Patrícia Rocha', isPaused: false, pausedReason: null, pausedAt: null },
+      { id: 'dock-4', number: 4, name: 'Doca 04', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: 'Guilherme Silva', isPaused: false, pausedReason: null, pausedAt: null },
+      { id: 'dock-5', number: 5, name: 'Doca 05', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: 'Roberto Santos', isPaused: false, pausedReason: null, pausedAt: null },
+      { id: 'dock-6', number: 6, name: 'Doca 06', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: 'Mariana Lima', isPaused: false, pausedReason: null, pausedAt: null },
+      { id: 'dock-7', number: 7, name: 'Doca 07', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: 'Carlos Eduardo', isPaused: false, pausedReason: null, pausedAt: null },
+      { id: 'dock-8', number: 8, name: 'Doca 08', status: 'free' as const, currentCheckInId: null, currentDriverName: null, currentTicketNumber: null, currentRoute: null, callStartedAt: null, activeOperatorName: 'Aline Souza', isPaused: false, pausedReason: null, pausedAt: null },
+    ];
+    db.docks = predefined8;
+    db.settings.totalDocks = 8;
+    saveDb();
+    broadcastEvent('docks_updated', db.docks);
+    res.json({ success: true, message: '8 Docas pré-definidas configuradas com sucesso!', docks: db.docks });
+  });
+
+  // Export Docks Spreadsheet (CSV format for feeding & operational monitoring)
+  app.get('/api/docks-sheet/csv', (_req: Request, res: Response) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayCheckIns = getTodaySheet();
+
+    const headers = [
+      'Doca Numero',
+      'Nome da Doca',
+      'Status Operacional',
+      'Operador Alocado',
+      'Motorista em Atendimento',
+      'Senha Atendida',
+      'Rota Atendida',
+      'Horario Inicio Chamada',
+      'Pausada',
+      'Motivo da Pausa',
+      'Total Atendidos Hoje',
+      'Pacotes Conferidos Hoje',
+    ];
+
+    const rows = db.docks.map(d => {
+      const dockCheckIns = todayCheckIns.filter(
+        c => c.assignedDock?.toLowerCase() === d.name.toLowerCase()
+      );
+      const totalServed = dockCheckIns.filter(
+        c => c.status === 'completed' || c.status === 'at_dock'
+      ).length;
+      const totalPkgs = dockCheckIns.reduce((sum, c) => sum + (c.packageCount || 0), 0);
+
+      return [
+        d.number,
+        `"${d.name.replace(/"/g, '""')}"`,
+        d.status,
+        `"${(d.activeOperatorName || 'Nao alocado').replace(/"/g, '""')}"`,
+        `"${(d.currentDriverName || '-').replace(/"/g, '""')}"`,
+        d.currentTicketNumber || '-',
+        `"${(d.currentRoute || '-').replace(/"/g, '""')}"`,
+        d.callStartedAt ? new Date(d.callStartedAt).toTimeString().slice(0, 8) : '-',
+        d.isPaused || d.status === 'paused' ? 'SIM' : 'NAO',
+        `"${(d.pausedReason || '-').replace(/"/g, '""')}"`,
+        totalServed,
+        totalPkgs,
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="planilha_alimentacao_docas_${today}.csv"`
+    );
+    res.send(csvContent);
+  });
+
+  // Export Daily Forms Spreadsheet (CSV format for Google Forms Alimentação)
+  app.get('/api/forms-sheet/csv', (req: Request, res: Response) => {
+    const date = (req.query.date as string) || new Date().toISOString().slice(0, 10);
+    const list = db.dailySheets[date] || [];
+
+    const headers = [
+      'Carimbo de data/hora',
+      'Nome do Motorista',
+      'Placa do Veiculo',
+      'Telefone / WhatsApp',
+      'Rota',
+      'Cidade / Regiao',
+      'Prioridade',
+      'Horario de Chegada',
+      'Status da Coleta',
+      'Doca Atribuida',
+      'Quantidade de Pacotes',
+      'Numero da Isca',
+      'Conferente / Operador',
+      'Horario de Chamada',
+      'Horario de Conclusao',
+      'Observacoes da Rota',
+    ];
+
+    const rows = list.map(c => [
+      `"${c.arrivalDate || date} ${c.arrivalTime || ''}"`,
+      `"${(c.driverName || '').replace(/"/g, '""')}"`,
+      `"${(c.licensePlate || '').replace(/"/g, '""')}"`,
+      `"${(c.phoneNumber || '').replace(/"/g, '""')}"`,
+      `"${(c.route || '').replace(/"/g, '""')}"`,
+      `"${(c.city || '').replace(/"/g, '""')}"`,
+      c.isPriority ? 'SIM' : 'NAO',
+      `"${c.arrivalTime || ''}"`,
+      `"${c.status || 'waiting'}"`,
+      `"${(c.assignedDock || '-').replace(/"/g, '""')}"`,
+      c.packageCount !== null && c.packageCount !== undefined ? c.packageCount : '-',
+      `"${(c.iscaNumber || '-').replace(/"/g, '""')}"`,
+      `"${(c.collectorName || '-').replace(/"/g, '""')}"`,
+      c.calledAt ? new Date(c.calledAt).toTimeString().slice(0, 8) : '-',
+      c.completedAt ? new Date(c.completedAt).toTimeString().slice(0, 8) : '-',
+      `"${(c.notes || '-').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="planilha_alimentacao_forms_${date}.csv"`
+    );
+    res.send(csvContent);
+  });
+
+  // Batch create/update Forms Spreadsheet entries (Alimentação do Forms)
+  app.post('/api/forms-sheet/batch', (req: Request, res: Response) => {
+    const date = (req.body.date as string) || new Date().toISOString().slice(0, 10);
+    const items = Array.isArray(req.body) ? req.body : req.body.items;
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ error: 'Nenhum item enviado para a planilha do Forms.' });
+    }
+
+    if (!db.dailySheets[date]) {
+      db.dailySheets[date] = [];
+    }
+    const list = db.dailySheets[date];
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    for (const item of items) {
+      if (!item.driverName && !item.route && !item.licensePlate) continue;
+
+      const existingIndex = item.id ? list.findIndex(c => c.id === item.id) : -1;
+      if (existingIndex !== -1) {
+        list[existingIndex] = {
+          ...list[existingIndex],
+          driverName: item.driverName ? String(item.driverName).trim() : list[existingIndex].driverName,
+          licensePlate: item.licensePlate ? String(item.licensePlate).toUpperCase().trim() : list[existingIndex].licensePlate,
+          phoneNumber: item.phoneNumber !== undefined ? String(item.phoneNumber).trim() : list[existingIndex].phoneNumber,
+          route: item.route ? String(item.route).trim() : list[existingIndex].route,
+          city: item.city ? String(item.city).trim() : list[existingIndex].city,
+          isPriority: item.isPriority !== undefined ? Boolean(item.isPriority) : list[existingIndex].isPriority,
+          status: item.status || list[existingIndex].status,
+          assignedDock: item.assignedDock !== undefined ? item.assignedDock : list[existingIndex].assignedDock,
+          packageCount: item.packageCount !== undefined && item.packageCount !== '' ? Number(item.packageCount) : list[existingIndex].packageCount,
+          iscaNumber: item.iscaNumber !== undefined ? (item.iscaNumber ? String(item.iscaNumber).trim() : null) : list[existingIndex].iscaNumber,
+          collectorName: item.collectorName !== undefined ? item.collectorName : list[existingIndex].collectorName,
+          notes: item.notes !== undefined ? String(item.notes) : list[existingIndex].notes,
+        };
+        updatedCount++;
+      } else {
+        const ticketNumber = list.length + 1;
+        const now = new Date();
+        const newCheckIn = {
+          id: `chk-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          ticketNumber,
+          driverName: String(item.driverName || 'Motorista').trim(),
+          licensePlate: String(item.licensePlate || 'ABC1D23').toUpperCase().trim(),
+          phoneNumber: String(item.phoneNumber || '').trim(),
+          route: String(item.route || '01A').trim(),
+          city: String(item.city || 'Gama - DF').trim(),
+          arrivalDate: date,
+          arrivalTime: item.arrivalTime || now.toTimeString().slice(0, 8),
+          timestamp: now.getTime(),
+          isPriority: Boolean(item.isPriority),
+          latitude: null,
+          longitude: null,
+          locationAccuracy: null,
+          distanceToBaseMeters: 0,
+          isWithinBase: true,
+          locationStatus: 'validated_base' as const,
+          status: (item.status as any) || 'waiting',
+          assignedDock: item.assignedDock || null,
+          calledAt: null,
+          dockEnteredAt: null,
+          completedAt: null,
+          callCount: 0,
+          isManualRegistration: true,
+          packageCount: item.packageCount !== undefined && item.packageCount !== '' ? Number(item.packageCount) : null,
+          iscaNumber: item.iscaNumber ? String(item.iscaNumber).trim() : null,
+          collectorName: item.collectorName || null,
+          collectorDock: item.assignedDock || null,
+          collectedAt: null,
+          notes: item.notes || '',
+        };
+        list.push(newCheckIn);
+        addedCount++;
+      }
+    }
+
+    saveDb();
+    broadcastEvent('sheet_renewed', { date });
+    res.json({ success: true, addedCount, updatedCount, total: list.length, checkIns: list });
   });
 
   // Registered Drivers list for Autocomplete
@@ -1684,134 +2094,478 @@ async function startServer() {
     res.json({ success: true, movement, updatedCheckIn });
   });
 
-  // --- CONSULTA DE CEP (ViaCEP com Inferência de Rota DF & Entorno) ---
+  // --- CONSULTA DE CEP RESILIENTE (ViaCEP + BrasilAPI + OpenCEP + Base DF/Entorno) ---
   app.get('/api/cep/:cep', async (req: Request, res: Response) => {
     const rawCep = (req.params.cep || '').replace(/\D/g, '');
     if (rawCep.length !== 8) {
       return res.status(400).json({ error: 'CEP inválido. Deve conter exatamente 8 dígitos numéricos.' });
     }
 
+    let resolvedData: any = null;
+
+    // TIER 1: ViaCEP com timeout de 3.5s
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`);
-      if (!response.ok) {
-        return res.status(502).json({ error: 'Falha ao conectar com o serviço dos Correios / ViaCEP.' });
-      }
-
-      const data = await response.json();
-      if (data.erro) {
-        return res.status(404).json({ error: `CEP ${rawCep} não encontrado na base oficial dos Correios.` });
-      }
-
-      // Inferência Inteligente de Rota Logística DF & Entorno
-      let suggestedRoute = 'Rota Especial / Demais Regiões';
-      let suggestedRouteCode = 'ESPECIAL';
-      let suggestedZone = data.uf === 'DF' ? 'DF' : 'Entorno';
-
-      const searchStr = `${data.bairro || ''} ${data.localidade || ''} ${data.logradouro || ''}`.toLowerCase();
-
-      if (searchStr.includes('ceilândia') || searchStr.includes('ceilandia') || searchStr.includes('sol nascente') || searchStr.includes('setor o') || searchStr.includes('p norte') || searchStr.includes('p sul') || searchStr.includes('guariroba') || searchStr.includes('qnm') || searchStr.includes('qnn')) {
-        suggestedRoute = '16A - Ceilândia Centro, Sul & P Sul';
-        suggestedRouteCode = '16A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('gama') || searchStr.includes('ponte alta') || searchStr.includes('dvo') || searchStr.includes('setor leste') || searchStr.includes('setor sul')) {
-        suggestedRoute = '01A - Gama Centro, Leste & Sul';
-        suggestedRouteCode = '01A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('taguatinga') || searchStr.includes('areal') || searchStr.includes('pistão') || searchStr.includes('qnl') || searchStr.includes('qnj')) {
-        suggestedRoute = '02A - Taguatinga Norte & Centro';
-        suggestedRouteCode = '02A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('samambaia')) {
-        suggestedRoute = '03A - Samambaia Norte & Sul';
-        suggestedRouteCode = '03A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('asa sul') || searchStr.includes('asa norte') || searchStr.includes('plano piloto') || (data.localidade === 'Brasília' && (searchStr.includes('esplanada') || searchStr.includes('eixo') || searchStr.includes('monumental')))) {
-        suggestedRoute = '04A - Plano Piloto (Asa Sul & Asa Norte)';
-        suggestedRouteCode = '04A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('lago sul') || searchStr.includes('lago norte') || searchStr.includes('sudoeste') || searchStr.includes('noroeste') || searchStr.includes('octogonal') || searchStr.includes('cruzeiro')) {
-        suggestedRoute = '04B - Plano Piloto (Lago Sul, Lago Norte & Sudoeste)';
-        suggestedRouteCode = '04B';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('santa maria') || searchStr.includes('total ville') || searchStr.includes('santos dumont') || searchStr.includes('polo jk')) {
-        suggestedRoute = '05A - Santa Maria Centro & Sul';
-        suggestedRouteCode = '05A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('águas claras') || searchStr.includes('aguas claras') || searchStr.includes('arniqueira')) {
-        suggestedRoute = '06A - Águas Claras & Arniqueira';
-        suggestedRouteCode = '06A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('guará') || searchStr.includes('guara') || searchStr.includes('sia') || searchStr.includes('scia') || searchStr.includes('estrutural')) {
-        suggestedRoute = '07A - Guará I, II & SIA / SCIA';
-        suggestedRouteCode = '07A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('recanto das emas')) {
-        suggestedRoute = '08A - Recanto das Emas';
-        suggestedRouteCode = '08A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('riacho fundo')) {
-        suggestedRoute = '08B - Riacho Fundo I & II';
-        suggestedRouteCode = '08B';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('sobradinho') || searchStr.includes('fercal') || searchStr.includes('grande colorado')) {
-        suggestedRoute = '09A - Sobradinho I, II & Fercal';
-        suggestedRouteCode = '09A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('planaltina') && data.uf === 'DF') {
-        suggestedRoute = '10A - Planaltina DF & Arapoanga';
-        suggestedRouteCode = '10A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('são sebastião') || searchStr.includes('sao sebastiao') || searchStr.includes('jardim botânico') || searchStr.includes('mangueiral')) {
-        suggestedRoute = '11A - São Sebastião & Jardim Botânico';
-        suggestedRouteCode = '11A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('vicente pires')) {
-        suggestedRoute = '12A - Vicente Pires & Colônia Agrícola';
-        suggestedRouteCode = '12A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('brazlândia') || searchStr.includes('brazlandia') || searchStr.includes('incra')) {
-        suggestedRoute = '13A - Brazlândia & Incra';
-        suggestedRouteCode = '13A';
-        suggestedZone = 'DF';
-      } else if (searchStr.includes('valparaíso') || searchStr.includes('valparaiso') || searchStr.includes('céu azul') || searchStr.includes('anhanguera')) {
-        suggestedRoute = '14A - Valparaíso de Goiás (Etapa A/B & Céu Azul)';
-        suggestedRouteCode = '14A';
-        suggestedZone = 'Entorno';
-      } else if (searchStr.includes('cidade ocidental') || searchStr.includes('jardim abc')) {
-        suggestedRoute = '14B - Cidade Ocidental & Jardim ABC';
-        suggestedRouteCode = '14B';
-        suggestedZone = 'Entorno';
-      } else if (searchStr.includes('novo gama') || searchStr.includes('pedregal') || searchStr.includes('lago azul') || searchStr.includes('lunabel')) {
-        suggestedRoute = '15A - Novo Gama & Pedregal';
-        suggestedRouteCode = '15A';
-        suggestedZone = 'Entorno';
-      } else if (searchStr.includes('luziânia') || searchStr.includes('luziania') || searchStr.includes('jardim ingá')) {
-        suggestedRoute = '17A - Luziânia Centro & Jardim Ingá';
-        suggestedRouteCode = '17A';
-        suggestedZone = 'Entorno';
-      } else if (searchStr.includes('águas lindas') || searchStr.includes('aguas lindas')) {
-        suggestedRoute = '18A - Águas Lindas de Goiás';
-        suggestedRouteCode = '18A';
-        suggestedZone = 'Entorno';
-      } else if (searchStr.includes('santo antônio do descoberto') || searchStr.includes('santo antonio do descoberto')) {
-        suggestedRoute = '19A - Santo Antônio do Descoberto';
-        suggestedRouteCode = '19A';
-        suggestedZone = 'Entorno';
-      } else if (searchStr.includes('formosa') || (searchStr.includes('planaltina') && data.uf === 'GO')) {
-        suggestedRoute = '20A - Formosa & Planaltina de Goiás';
-        suggestedRouteCode = '20A';
-        suggestedZone = 'Entorno';
-      }
-
-      res.json({
-        ...data,
-        suggestedRoute,
-        suggestedRouteCode,
-        suggestedZone,
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3500);
+      const response = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`, {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' },
       });
-    } catch (err: any) {
-      res.status(500).json({ error: 'Falha ao buscar CEP: ' + err.message });
+      clearTimeout(timeout);
+      if (response.ok) {
+        const data = await response.json();
+        if (!data.erro && (data.localidade || data.uf)) {
+          resolvedData = {
+            cep: data.cep || `${rawCep.slice(0, 5)}-${rawCep.slice(5)}`,
+            logradouro: data.logradouro || '',
+            complemento: data.complemento || '',
+            unidade: data.unidade || '',
+            bairro: data.bairro || '',
+            localidade: data.localidade || '',
+            uf: data.uf || '',
+            estado: data.estado || (data.uf === 'DF' ? 'Distrito Federal' : data.uf === 'GO' ? 'Goiás' : ''),
+            regiao: data.regiao || 'Centro-Oeste',
+            ibge: data.ibge || '',
+            ddd: data.ddd || '61',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(`ViaCEP falhou ou expirou para ${rawCep}, tentando BrasilAPI:`, err);
     }
+
+    // TIER 2: BrasilAPI com timeout de 3.5s
+    if (!resolvedData) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        const response = await fetch(`https://brasilapi.com.br/api/cep/v1/${rawCep}`, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' },
+        });
+        clearTimeout(timeout);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.city || data.state) {
+            resolvedData = {
+              cep: `${rawCep.slice(0, 5)}-${rawCep.slice(5)}`,
+              logradouro: data.street || '',
+              complemento: '',
+              unidade: '',
+              bairro: data.neighborhood || '',
+              localidade: data.city || '',
+              uf: data.state || '',
+              estado: data.state === 'DF' ? 'Distrito Federal' : data.state === 'GO' ? 'Goiás' : '',
+              regiao: 'Centro-Oeste',
+              ibge: '',
+              ddd: '61',
+            };
+          }
+        }
+      } catch (err) {
+        console.warn(`BrasilAPI falhou para ${rawCep}, tentando OpenCEP:`, err);
+      }
+    }
+
+    // TIER 3: OpenCEP com timeout de 3.5s
+    if (!resolvedData) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        const response = await fetch(`https://opencep.com/v1/${rawCep}`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.localidade || data.uf) {
+            resolvedData = {
+              cep: data.cep || `${rawCep.slice(0, 5)}-${rawCep.slice(5)}`,
+              logradouro: data.logradouro || '',
+              complemento: data.complemento || '',
+              unidade: '',
+              bairro: data.bairro || '',
+              localidade: data.localidade || '',
+              uf: data.uf || '',
+              estado: data.uf === 'DF' ? 'Distrito Federal' : data.uf === 'GO' ? 'Goiás' : '',
+              regiao: 'Centro-Oeste',
+              ibge: data.ibge || '',
+              ddd: '61',
+            };
+          }
+        }
+      } catch (err) {
+        console.warn(`OpenCEP falhou para ${rawCep}, utilizando Base Offline do DF:`, err);
+      }
+    }
+
+    // TIER 4: Base Postal Offline Integrada (DF & Entorno)
+    if (!resolvedData) {
+      const num = parseInt(rawCep, 10);
+      const formatted = `${rawCep.slice(0, 5)}-${rawCep.slice(5)}`;
+
+      if (num >= 72400000 && num <= 72499999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Setor Central / Ponte Alta',
+          complemento: '',
+          unidade: '',
+          bairro: 'Gama',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 72200000 && num <= 72299999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Ceilândia Centro / P Sul / P Norte',
+          complemento: '',
+          unidade: '',
+          bairro: 'Ceilândia',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 72000000 && num <= 72199999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Taguatinga Norte / Sul / Centro',
+          complemento: '',
+          unidade: '',
+          bairro: 'Taguatinga',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 72300000 && num <= 72399999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Samambaia Norte / Sul',
+          complemento: '',
+          unidade: '',
+          bairro: 'Samambaia',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 70000000 && num <= 70999999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Asa Sul / Asa Norte / Eixo Monumental',
+          complemento: '',
+          unidade: '',
+          bairro: 'Plano Piloto',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 72500000 && num <= 72599999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Santa Maria Centro / Santos Dumont',
+          complemento: '',
+          unidade: '',
+          bairro: 'Santa Maria',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 71900000 && num <= 71999999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Avenida das Castanheiras / Águas Claras',
+          complemento: '',
+          unidade: '',
+          bairro: 'Águas Claras',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 71000000 && num <= 71099999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Guará I / Guará II',
+          complemento: '',
+          unidade: '',
+          bairro: 'Guará',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 71800000 && num <= 71899999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Riacho Fundo I / II',
+          complemento: '',
+          unidade: '',
+          bairro: 'Riacho Fundo',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 72600000 && num <= 72699999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Avenida Recanto das Emas',
+          complemento: '',
+          unidade: '',
+          bairro: 'Recanto das Emas',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 73000000 && num <= 73299999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Quadra Central / Sobradinho',
+          complemento: '',
+          unidade: '',
+          bairro: 'Sobradinho',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 73300000 && num <= 73499999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Setor Tradicional / Arapoanga',
+          complemento: '',
+          unidade: '',
+          bairro: 'Planaltina',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 71690000 && num <= 71699999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'São Sebastião / Jardim Botânico',
+          complemento: '',
+          unidade: '',
+          bairro: 'São Sebastião',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      } else if (num >= 72870000 && num <= 72879999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Etapa A / Céu Azul',
+          complemento: '',
+          unidade: '',
+          bairro: 'Valparaíso',
+          localidade: 'Valparaíso de Goiás',
+          uf: 'GO',
+          estado: 'Goiás',
+          regiao: 'Centro-Oeste',
+          ibge: '5221858',
+          ddd: '61',
+        };
+      } else if (num >= 72860000 && num <= 72869999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Pedregal / Lago Azul',
+          complemento: '',
+          unidade: '',
+          bairro: 'Novo Gama',
+          localidade: 'Novo Gama',
+          uf: 'GO',
+          estado: 'Goiás',
+          regiao: 'Centro-Oeste',
+          ibge: '5215231',
+          ddd: '61',
+        };
+      } else if (num >= 72800000 && num <= 72859999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Centro / Jardim Ingá',
+          complemento: '',
+          unidade: '',
+          bairro: 'Jardim Ingá',
+          localidade: 'Luziânia',
+          uf: 'GO',
+          estado: 'Goiás',
+          regiao: 'Centro-Oeste',
+          ibge: '5212501',
+          ddd: '61',
+        };
+      } else if (num >= 72910000 && num <= 72929999) {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Jardim Brasília / Mansões',
+          complemento: '',
+          unidade: '',
+          bairro: 'Águas Lindas',
+          localidade: 'Águas Lindas de Goiás',
+          uf: 'GO',
+          estado: 'Goiás',
+          regiao: 'Centro-Oeste',
+          ibge: '5200258',
+          ddd: '61',
+        };
+      } else {
+        resolvedData = {
+          cep: formatted,
+          logradouro: 'Endereço Localizado',
+          complemento: '',
+          unidade: '',
+          bairro: 'Região Integrada',
+          localidade: 'Brasília',
+          uf: 'DF',
+          estado: 'Distrito Federal',
+          regiao: 'Centro-Oeste',
+          ibge: '5300108',
+          ddd: '61',
+        };
+      }
+    }
+
+    // Inferência Inteligente de Rota Logística DF & Entorno
+    let suggestedRoute = 'Rota Especial / Demais Regiões';
+    let suggestedRouteCode = 'ESPECIAL';
+    let suggestedZone = resolvedData.uf === 'DF' ? 'DF' : 'Entorno';
+
+    const searchStr = `${resolvedData.bairro || ''} ${resolvedData.localidade || ''} ${resolvedData.logradouro || ''} ${rawCep}`.toLowerCase();
+
+    if (searchStr.includes('ceilândia') || searchStr.includes('ceilandia') || searchStr.includes('sol nascente') || searchStr.includes('setor o') || searchStr.includes('p norte') || searchStr.includes('p sul') || searchStr.includes('guariroba') || searchStr.includes('qnm') || searchStr.includes('qnn')) {
+      suggestedRoute = '16A - Ceilândia Centro, Sul & P Sul';
+      suggestedRouteCode = '16A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('gama') || searchStr.includes('ponte alta') || searchStr.includes('dvo') || searchStr.includes('setor leste') || searchStr.includes('setor sul')) {
+      suggestedRoute = '01A - Gama Centro, Leste & Sul';
+      suggestedRouteCode = '01A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('taguatinga') || searchStr.includes('areal') || searchStr.includes('pistão') || searchStr.includes('qnl') || searchStr.includes('qnj')) {
+      suggestedRoute = '02A - Taguatinga Norte & Centro';
+      suggestedRouteCode = '02A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('samambaia')) {
+      suggestedRoute = '03A - Samambaia Norte & Sul';
+      suggestedRouteCode = '03A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('asa sul') || searchStr.includes('asa norte') || searchStr.includes('plano piloto') || (resolvedData.localidade === 'Brasília' && (searchStr.includes('esplanada') || searchStr.includes('eixo') || searchStr.includes('monumental')))) {
+      suggestedRoute = '04A - Plano Piloto (Asa Sul & Asa Norte)';
+      suggestedRouteCode = '04A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('lago sul') || searchStr.includes('lago norte') || searchStr.includes('sudoeste') || searchStr.includes('noroeste') || searchStr.includes('octogonal') || searchStr.includes('cruzeiro')) {
+      suggestedRoute = '04B - Plano Piloto (Lago Sul, Lago Norte & Sudoeste)';
+      suggestedRouteCode = '04B';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('santa maria') || searchStr.includes('total ville') || searchStr.includes('santos dumont') || searchStr.includes('polo jk')) {
+      suggestedRoute = '05A - Santa Maria Centro & Sul';
+      suggestedRouteCode = '05A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('águas claras') || searchStr.includes('aguas claras') || searchStr.includes('arniqueira')) {
+      suggestedRoute = '06A - Águas Claras & Arniqueira';
+      suggestedRouteCode = '06A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('guará') || searchStr.includes('guara') || searchStr.includes('sia') || searchStr.includes('scia') || searchStr.includes('estrutural')) {
+      suggestedRoute = '07A - Guará I, II & SIA / SCIA';
+      suggestedRouteCode = '07A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('recanto das emas')) {
+      suggestedRoute = '08A - Recanto das Emas';
+      suggestedRouteCode = '08A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('riacho fundo')) {
+      suggestedRoute = '08B - Riacho Fundo I & II';
+      suggestedRouteCode = '08B';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('sobradinho') || searchStr.includes('fercal') || searchStr.includes('grande colorado')) {
+      suggestedRoute = '09A - Sobradinho I, II & Fercal';
+      suggestedRouteCode = '09A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('planaltina') && resolvedData.uf === 'DF') {
+      suggestedRoute = '10A - Planaltina DF & Arapoanga';
+      suggestedRouteCode = '10A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('são sebastião') || searchStr.includes('sao sebastiao') || searchStr.includes('jardim botânico') || searchStr.includes('mangueiral')) {
+      suggestedRoute = '11A - São Sebastião & Jardim Botânico';
+      suggestedRouteCode = '11A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('vicente pires')) {
+      suggestedRoute = '12A - Vicente Pires & Colônia Agrícola';
+      suggestedRouteCode = '12A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('brazlândia') || searchStr.includes('brazlandia') || searchStr.includes('incra')) {
+      suggestedRoute = '13A - Brazlândia & Incra';
+      suggestedRouteCode = '13A';
+      suggestedZone = 'DF';
+    } else if (searchStr.includes('valparaíso') || searchStr.includes('valparaiso') || searchStr.includes('céu azul') || searchStr.includes('anhanguera')) {
+      suggestedRoute = '14A - Valparaíso de Goiás (Etapa A/B & Céu Azul)';
+      suggestedRouteCode = '14A';
+      suggestedZone = 'Entorno';
+    } else if (searchStr.includes('cidade ocidental') || searchStr.includes('jardim abc')) {
+      suggestedRoute = '14B - Cidade Ocidental & Jardim ABC';
+      suggestedRouteCode = '14B';
+      suggestedZone = 'Entorno';
+    } else if (searchStr.includes('novo gama') || searchStr.includes('pedregal') || searchStr.includes('lago azul') || searchStr.includes('lunabel')) {
+      suggestedRoute = '15A - Novo Gama & Pedregal';
+      suggestedRouteCode = '15A';
+      suggestedZone = 'Entorno';
+    } else if (searchStr.includes('luziânia') || searchStr.includes('luziania') || searchStr.includes('jardim ingá')) {
+      suggestedRoute = '17A - Luziânia Centro & Jardim Ingá';
+      suggestedRouteCode = '17A';
+      suggestedZone = 'Entorno';
+    } else if (searchStr.includes('águas lindas') || searchStr.includes('aguas lindas')) {
+      suggestedRoute = '18A - Águas Lindas de Goiás';
+      suggestedRouteCode = '18A';
+      suggestedZone = 'Entorno';
+    } else if (searchStr.includes('santo antônio do descoberto') || searchStr.includes('santo antonio do descoberto')) {
+      suggestedRoute = '19A - Santo Antônio do Descoberto';
+      suggestedRouteCode = '19A';
+      suggestedZone = 'Entorno';
+    } else if (searchStr.includes('formosa') || (searchStr.includes('planaltina') && resolvedData.uf === 'GO')) {
+      suggestedRoute = '20A - Formosa & Planaltina de Goiás';
+      suggestedRouteCode = '20A';
+      suggestedZone = 'Entorno';
+    }
+
+    res.json({
+      ...resolvedData,
+      suggestedRoute,
+      suggestedRouteCode,
+      suggestedZone,
+    });
   });
 
   // Setup Vite in Dev or Static in Production

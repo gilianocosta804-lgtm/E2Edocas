@@ -8,7 +8,7 @@
     "autoVoiceCall": true,
     "voiceGender": "female",
     "soundAlerts": true,
-    "totalDocks": 11,
+    "totalDocks": 8,
     "masterGoogle": {
       "connected": true,
       "email": "gilianocosta804@gmail.com",
@@ -17,7 +17,7 @@
       "formId": "e2e_docas_form_2026-10-12",
       "formUrl": "https://docs.google.com/forms/d/1E2E_Docas_Form_2026-10-12",
       "autoSync": true,
-      "lastSyncAt": "2026-10-12T07:28:19.981Z"
+      "lastSyncAt": "2026-10-12T08:15:07.422Z"
     }
   },
   "collaborators": [
@@ -28,7 +28,7 @@
       "role": "master",
       "isAdmin": true,
       "isMaster": true,
-      "pin": "415263",
+      "pin": "Gili2112#@",
       "email": "gilianocosta804@gmail.com",
       "active": true,
       "assignedDock": "Administração / Geral",
@@ -38,10 +38,12 @@
         "canCallDrivers": true,
         "canCollectPackages": true,
         "canConfigureDocks": true,
-        "canMovePackages": true
+        "canMovePackages": true,
+        "canUseChat": true,
+        "canConsultCep": true
       },
       "createdAt": "2026-01-01",
-      "lastLogin": "2026-10-12T07:28:19.981Z"
+      "lastLogin": "2026-10-12T08:15:07.422Z"
     },
     {
       "id": "collab-1",
@@ -237,19 +239,26 @@
       "currentDriverName": "Marcos Vinícius Silva",
       "currentTicketNumber": 1,
       "currentRoute": "01A",
-      "callStartedAt": null
+      "callStartedAt": null,
+      "activeOperatorName": "Lucas Ferreira",
+      "isPaused": false,
+      "pausedReason": null,
+      "pausedAt": null
     },
     {
       "id": "dock-2",
       "number": 2,
       "name": "Doca 02",
-      "status": "calling",
-      "currentCheckInId": "chk-1791604960228-272",
-      "currentDriverName": "giliano",
-      "currentTicketNumber": 1,
-      "currentRoute": "16B",
-      "callStartedAt": "2026-10-10T04:43:51.933Z",
-      "activeOperatorName": "Fernando Portaria"
+      "status": "free",
+      "currentCheckInId": null,
+      "currentDriverName": null,
+      "currentTicketNumber": null,
+      "currentRoute": null,
+      "callStartedAt": null,
+      "activeOperatorName": "Fernando Guarita",
+      "isPaused": false,
+      "pausedReason": null,
+      "pausedAt": null
     },
     {
       "id": "dock-3",
@@ -260,7 +269,11 @@
       "currentDriverName": "Anderson Pereira Gomes",
       "currentTicketNumber": 2,
       "currentRoute": "16A",
-      "callStartedAt": "2026-10-09T21:16:07.370Z"
+      "callStartedAt": "2026-10-12T08:36:39.149Z",
+      "activeOperatorName": "Patrícia Rocha",
+      "isPaused": false,
+      "pausedReason": null,
+      "pausedAt": null
     },
     {
       "id": "dock-4",
@@ -271,19 +284,26 @@
       "currentDriverName": null,
       "currentTicketNumber": null,
       "currentRoute": null,
-      "callStartedAt": null
+      "callStartedAt": null,
+      "activeOperatorName": null,
+      "isPaused": false,
+      "pausedReason": null,
+      "pausedAt": null
     },
     {
       "id": "dock-5",
       "number": 5,
       "name": "Doca 05",
-      "status": "calling",
-      "currentCheckInId": "chk-1791604960228-272",
-      "currentDriverName": "giliano",
-      "currentTicketNumber": 1,
-      "currentRoute": "16b",
-      "callStartedAt": "2026-10-10T04:43:55.960Z",
-      "activeOperatorName": "Carlos Admin"
+      "status": "free",
+      "currentCheckInId": null,
+      "currentDriverName": null,
+      "currentTicketNumber": null,
+      "currentRoute": null,
+      "callStartedAt": null,
+      "activeOperatorName": null,
+      "isPaused": false,
+      "pausedReason": null,
+      "pausedAt": null
     },
     {
       "id": "dock-6",
@@ -295,6 +315,7 @@
       "currentTicketNumber": null,
       "currentRoute": null,
       "callStartedAt": null,
+      "activeOperatorName": null,
       "isPaused": false,
       "pausedReason": null,
       "pausedAt": null
@@ -308,7 +329,11 @@
       "currentDriverName": null,
       "currentTicketNumber": null,
       "currentRoute": null,
-      "callStartedAt": null
+      "callStartedAt": null,
+      "activeOperatorName": null,
+      "isPaused": false,
+      "pausedReason": null,
+      "pausedAt": null
     },
     {
       "id": "dock-8",
@@ -320,42 +345,10 @@
       "currentTicketNumber": null,
       "currentRoute": null,
       "callStartedAt": null,
+      "activeOperatorName": null,
       "isPaused": false,
       "pausedReason": null,
       "pausedAt": null
-    },
-    {
-      "id": "dock-9",
-      "number": 9,
-      "name": "Doca 09",
-      "status": "free",
-      "currentCheckInId": null,
-      "currentDriverName": null,
-      "currentTicketNumber": null,
-      "currentRoute": null,
-      "callStartedAt": null
-    },
-    {
-      "id": "dock-10",
-      "number": 10,
-      "name": "Doca 10",
-      "status": "free",
-      "currentCheckInId": null,
-      "currentDriverName": null,
-      "currentTicketNumber": null,
-      "currentRoute": null,
-      "callStartedAt": null
-    },
-    {
-      "id": "dock-1791604576870-11",
-      "number": 11,
-      "name": "Doca 11",
-      "status": "free",
-      "currentCheckInId": null,
-      "currentDriverName": null,
-      "currentTicketNumber": null,
-      "currentRoute": null,
-      "callStartedAt": null
     }
   ],
   "dailySheets": {
