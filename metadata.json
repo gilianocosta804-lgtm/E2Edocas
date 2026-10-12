@@ -1,0 +1,6 @@
+{
+  "name": "DocaFlow - Sistema de Chamada de Motoristas & Docas",
+  "description": "Dashboard em tempo real para chamada de motoristas nas docas com check-in geolocalizado, planilha diária automática e painel móvel.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
