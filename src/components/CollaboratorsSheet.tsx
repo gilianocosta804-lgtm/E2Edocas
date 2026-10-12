@@ -86,6 +86,9 @@ export const CollaboratorsSheet: React.FC<CollaboratorsSheetProps> = ({
       canCallDrivers: true,
       canCollectPackages: true,
       canConfigureDocks: false,
+      canMovePackages: false,
+      canUseChat: false,
+      canConsultCep: false,
     });
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -106,6 +109,9 @@ export const CollaboratorsSheet: React.FC<CollaboratorsSheetProps> = ({
       canCallDrivers: true,
       canCollectPackages: true,
       canConfigureDocks: user.isAdmin,
+      canMovePackages: user.isAdmin || Boolean(user.isMaster),
+      canUseChat: user.isAdmin || Boolean(user.isMaster),
+      canConsultCep: user.isAdmin || Boolean(user.isMaster),
     });
     setErrorMsg(null);
   };
@@ -119,6 +125,9 @@ export const CollaboratorsSheet: React.FC<CollaboratorsSheetProps> = ({
         canCallDrivers: true,
         canCollectPackages: true,
         canConfigureDocks: true,
+        canMovePackages: true,
+        canUseChat: true,
+        canConsultCep: true,
       });
     } else {
       setPermissions({
@@ -127,6 +136,9 @@ export const CollaboratorsSheet: React.FC<CollaboratorsSheetProps> = ({
         canCallDrivers: true,
         canCollectPackages: true,
         canConfigureDocks: false,
+        canMovePackages: false,
+        canUseChat: false,
+        canConsultCep: false,
       });
     }
   };
@@ -430,6 +442,21 @@ export const CollaboratorsSheet: React.FC<CollaboratorsSheetProps> = ({
                     {/* PERMISSIONS TAGS */}
                     <td className="p-3.5">
                       <div className="flex flex-wrap gap-1 max-w-xs">
+                        {user.permissions?.canMovePackages && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                            Pacotes
+                          </span>
+                        )}
+                        {user.permissions?.canUseChat && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            Chat ADM
+                          </span>
+                        )}
+                        {user.permissions?.canConsultCep && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            CEP
+                          </span>
+                        )}
                         {user.permissions?.canViewSpreadsheet && (
                           <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
                             Planilha
@@ -442,7 +469,7 @@ export const CollaboratorsSheet: React.FC<CollaboratorsSheetProps> = ({
                         )}
                         {user.permissions?.canCollectPackages && (
                           <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
-                            Pacotes/Isca
+                            Coleta/Isca
                           </span>
                         )}
                         {user.permissions?.canManageUsers && (
@@ -450,6 +477,15 @@ export const CollaboratorsSheet: React.FC<CollaboratorsSheetProps> = ({
                             Gestão Usuários
                           </span>
                         )}
+                        {!user.permissions?.canMovePackages &&
+                          !user.permissions?.canUseChat &&
+                          !user.permissions?.canConsultCep &&
+                          !user.permissions?.canViewSpreadsheet &&
+                          !user.permissions?.canManageUsers && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-900/60 text-zinc-500 border border-zinc-850">
+                              Doca Padrão
+                            </span>
+                          )}
                       </div>
                     </td>
 
@@ -624,6 +660,42 @@ export const CollaboratorsSheet: React.FC<CollaboratorsSheetProps> = ({
                 </span>
 
                 <div className="space-y-2">
+                  <label className="flex items-center gap-2.5 text-xs text-amber-300 font-semibold cursor-pointer p-1.5 rounded-lg bg-amber-950/20 border border-amber-500/20">
+                    <input
+                      type="checkbox"
+                      checked={permissions.canMovePackages || false}
+                      onChange={e =>
+                        setPermissions({ ...permissions, canMovePackages: e.target.checked })
+                      }
+                      className="rounded bg-zinc-950 border-amber-500/50 text-amber-500 focus:ring-0"
+                    />
+                    <span>Movimentar Pacote (Transferir/Adicionar pacotes entre rotas)</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 text-xs text-blue-300 font-medium cursor-pointer p-1.5 rounded-lg bg-blue-950/20 border border-blue-500/20">
+                    <input
+                      type="checkbox"
+                      checked={permissions.canUseChat || false}
+                      onChange={e =>
+                        setPermissions({ ...permissions, canUseChat: e.target.checked })
+                      }
+                      className="rounded bg-zinc-950 border-blue-500/50 text-blue-500 focus:ring-0"
+                    />
+                    <span>Usar Chat em Tempo Real com a Administração</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 text-xs text-emerald-300 font-medium cursor-pointer p-1.5 rounded-lg bg-emerald-950/20 border border-emerald-500/20">
+                    <input
+                      type="checkbox"
+                      checked={permissions.canConsultCep || false}
+                      onChange={e =>
+                        setPermissions({ ...permissions, canConsultCep: e.target.checked })
+                      }
+                      className="rounded bg-zinc-950 border-emerald-500/50 text-emerald-500 focus:ring-0"
+                    />
+                    <span>Consultar CEP Oficial (ViaCEP / Correios)</span>
+                  </label>
+
                   <label className="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer">
                     <input
                       type="checkbox"

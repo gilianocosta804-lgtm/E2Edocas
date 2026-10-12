@@ -82,6 +82,22 @@ export const DockCallDashboard: React.FC<DockCallDashboardProps> = ({
   const hasAllDocksAccess = Boolean(currentUser?.isMaster || currentUser?.isAdmin);
   const userAssignedDock = currentUser?.assignedDock || '';
 
+  const canCallDrivers = Boolean(
+    currentUser?.isMaster || currentUser?.isAdmin || currentUser?.permissions?.canCallDrivers
+  );
+  const canCollectPackages = Boolean(
+    currentUser?.isMaster || currentUser?.isAdmin || currentUser?.permissions?.canCollectPackages
+  );
+  const canMovePackages = Boolean(
+    currentUser?.isMaster || currentUser?.isAdmin || currentUser?.permissions?.canMovePackages
+  );
+  const canUseChat = Boolean(
+    currentUser?.isMaster || currentUser?.isAdmin || currentUser?.permissions?.canUseChat
+  );
+  const canConsultCep = Boolean(
+    currentUser?.isMaster || currentUser?.isAdmin || currentUser?.permissions?.canConsultCep
+  );
+
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'waiting' | 'called' | 'at_dock'>('all');
@@ -577,8 +593,8 @@ export const DockCallDashboard: React.FC<DockCallDashboardProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* CHAT DOCA <-> ADM */}
-            {onOpenChat && (
+            {/* CHAT DOCA <-> ADM (APENAS COM AUTORIZAÇÃO) */}
+            {canUseChat && onOpenChat && (
               <button
                 onClick={onOpenChat}
                 className="px-3 py-1.5 rounded-lg bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 hover:text-blue-100 text-xs font-semibold border border-blue-500/40 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
@@ -589,8 +605,8 @@ export const DockCallDashboard: React.FC<DockCallDashboardProps> = ({
               </button>
             )}
 
-            {/* CONSULTA CEP */}
-            {onOpenCep && (
+            {/* CONSULTA CEP (APENAS COM AUTORIZAÇÃO) */}
+            {canConsultCep && onOpenCep && (
               <button
                 onClick={onOpenCep}
                 className="px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 hover:text-emerald-100 text-xs font-semibold border border-emerald-500/40 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
@@ -601,8 +617,8 @@ export const DockCallDashboard: React.FC<DockCallDashboardProps> = ({
               </button>
             )}
 
-            {/* MOVIMENTAR PACOTE */}
-            {onOpenPackageMovement && (
+            {/* MOVIMENTAR PACOTE (APENAS COM AUTORIZAÇÃO) */}
+            {canMovePackages && onOpenPackageMovement && (
               <button
                 onClick={() => onOpenPackageMovement()}
                 className="px-3 py-1.5 rounded-lg bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 hover:text-amber-100 text-xs font-semibold border border-amber-500/40 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"

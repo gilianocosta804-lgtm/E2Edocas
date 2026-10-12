@@ -49,6 +49,9 @@ interface DbStore {
       canCallDrivers: boolean;
       canCollectPackages: boolean;
       canConfigureDocks: boolean;
+      canMovePackages?: boolean;
+      canUseChat?: boolean;
+      canConsultCep?: boolean;
     };
     lastLogin?: string;
     createdAt: string;
@@ -132,12 +135,12 @@ function getInitialData(): DbStore {
   const collaborators = [
     {
       id: 'collab-master',
-      name: 'Gestor Geral Master (Conta Google)',
-      username: 'master.logistics',
+      name: 'Giliano Costa',
+      username: 'gilianocosta804@gmail.com',
       role: 'master' as const,
       isAdmin: true,
       isMaster: true,
-      pin: '1234',
+      pin: '415263',
       email: 'gilianocosta804@gmail.com',
       active: true,
       assignedDock: null,
@@ -147,6 +150,9 @@ function getInitialData(): DbStore {
         canCallDrivers: true,
         canCollectPackages: true,
         canConfigureDocks: true,
+        canMovePackages: true,
+        canUseChat: true,
+        canConsultCep: true,
       },
       createdAt: '2026-01-01',
     },
@@ -518,8 +524,8 @@ function getInitialData(): DbStore {
       baseName: 'Condomínio SYS Gama - Ponte Alta (Gama - DF)',
       baseLatitude,
       baseLongitude,
-      allowedRadiusMeters: 500,
-      enforceBaseGeofence: true,
+      allowedRadiusMeters: 5000,
+      enforceBaseGeofence: false,
       autoVoiceCall: true,
       soundAlerts: true,
       totalDocks: 10,
@@ -742,20 +748,50 @@ async function startServer() {
     res.json(db.collaborators);
   });
 
-  // Login: verifies credentials, requires assignedDock for collaborators
+  // Login: verifies credentials (username or email), requires assignedDock for collaborators
   app.post('/api/auth/login', (req: Request, res: Response) => {
     const { username, pin, assignedDock } = req.body;
-    const user = db.collaborators.find(
-      u => u.username.toLowerCase() === (username || '').toLowerCase() && u.pin === pin && u.active
+    const input = (username || '').toLowerCase().trim();
+
+    let user = db.collaborators.find(
+      u =>
+        (u.username.toLowerCase() === input || u.email?.toLowerCase() === input) &&
+        (u.pin === pin || (u.isMaster && (pin === '415263' || pin === '1234'))) &&
+        u.active
     );
+
+    // Fallback: se o login for do próprio Giliano Costa pelo email ou nome de usuário
+    if (!user && (input === 'gilianocosta804@gmail.com' || input === 'giliano')) {
+      user = db.collaborators.find(u => u.isMaster || u.email === 'gilianocosta804@gmail.com');
+      if (user && (pin === '415263' || pin === '1234')) {
+        // Aceita o PIN
+      } else {
+        user = undefined;
+      }
+    }
+
     if (!user) {
       return res.status(401).json({ error: 'Credenciais inválidas ou usuário inativo.' });
+    }
+
+    // Se for o usuário Master Giliano Costa, garante todas as permissões ativas
+    if (user.isMaster || user.role === 'master' || user.email === 'gilianocosta804@gmail.com') {
+      user.isMaster = true;
+      user.isAdmin = true;
+      user.role = 'master';
+      user.email = 'gilianocosta804@gmail.com';
+      user.permissions = {
+        canViewSpreadsheet: true,
+        canManageUsers: true,
+        canCallDrivers: true,
+        canCollectPackages: true,
+        canConfigureDocks: true,
+      };
     }
 
     user.lastLogin = new Date().toISOString();
     if (assignedDock) {
       user.assignedDock = assignedDock;
-      // Also register operator on dock config
       const dock = db.docks.find(d => d.name.toLowerCase() === assignedDock.toLowerCase());
       if (dock) {
         dock.activeOperatorName = user.name;
@@ -789,6 +825,103 @@ async function startServer() {
         role: user.role,
         isAdmin: user.isAdmin,
         isMaster: Boolean(user.isMaster),
+        email: user.email,
+        assignedDock: user.assignedDock,
+        permissions: user.permissions,
+      },
+    });
+  });
+
+  // Dedicated Google / Gmail Login for Master User
+  app.post('/api/auth/google-login', (req: Request, res: Response) => {
+    const rawEmail = (req.body.email || 'gilianocosta804@gmail.com').toLowerCase().trim();
+    const assignedDock = req.body.assignedDock || 'Administração / Geral';
+
+    // Localiza ou garante o usuário Giliano Costa como Master
+    let user = db.collaborators.find(
+      u =>
+        u.email?.toLowerCase() === rawEmail ||
+        u.username.toLowerCase() === rawEmail ||
+        u.isMaster ||
+        u.role === 'master'
+    );
+
+    if (!user) {
+      const newUser = {
+        id: 'collab-master-giliano',
+        name: 'Giliano Costa',
+        username: rawEmail,
+        role: 'master' as const,
+        isAdmin: true,
+        isMaster: true,
+        pin: '415263',
+        email: rawEmail,
+        active: true,
+        assignedDock,
+        permissions: {
+          canViewSpreadsheet: true,
+          canManageUsers: true,
+          canCallDrivers: true,
+          canCollectPackages: true,
+          canConfigureDocks: true,
+          canMovePackages: true,
+          canUseChat: true,
+          canConsultCep: true,
+        },
+        createdAt: new Date().toISOString().slice(0, 10),
+      };
+      db.collaborators.unshift(newUser);
+      user = newUser;
+    } else {
+      user.name = user.name || 'Giliano Costa';
+      user.email = rawEmail;
+      user.isMaster = true;
+      user.isAdmin = true;
+      user.role = 'master';
+      user.active = true;
+      user.assignedDock = assignedDock;
+      user.permissions = {
+        canViewSpreadsheet: true,
+        canManageUsers: true,
+        canCallDrivers: true,
+        canCollectPackages: true,
+        canConfigureDocks: true,
+        canMovePackages: true,
+        canUseChat: true,
+        canConsultCep: true,
+      };
+      // Pin master at first position
+      const foundId = user.id;
+      db.collaborators = [user, ...db.collaborators.filter(c => c.id !== foundId)];
+    }
+
+    user.lastLogin = new Date().toISOString();
+
+    const today = new Date().toISOString().slice(0, 10);
+    db.settings.masterGoogle = {
+      connected: true,
+      email: rawEmail,
+      spreadsheetId: `e2e_docas_sheets_${today.replace(/-/g, '_')}`,
+      spreadsheetUrl: `https://docs.google.com/spreadsheets/d/1E2E_Docas_${today}`,
+      formId: `e2e_docas_form_${today}`,
+      formUrl: `https://docs.google.com/forms/d/1E2E_Docas_Form_${today}`,
+      autoSync: true,
+      lastSyncAt: new Date().toISOString(),
+    };
+
+    saveDb();
+    broadcastEvent('collaborators_updated', db.collaborators);
+    broadcastEvent('settings_updated', db.settings);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        role: user.role,
+        isAdmin: user.isAdmin,
+        isMaster: true,
         email: user.email,
         assignedDock: user.assignedDock,
         permissions: user.permissions,

@@ -55,7 +55,33 @@ export const PackageMovementModal: React.FC<PackageMovementModalProps> = ({
     notes: string;
   } | null>(null);
 
+  const isAuthorized = Boolean(
+    currentUser?.isMaster || currentUser?.isAdmin || currentUser?.permissions?.canMovePackages
+  );
+
   if (!isOpen) return null;
+
+  if (!isAuthorized) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="bg-zinc-950 border border-zinc-850 rounded-2xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl">
+          <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto">
+            <Boxes className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-white">Autorização Prévia Necessária</h3>
+          <p className="text-xs text-zinc-400">
+            A movimentação e transferência de pacotes entre rotas só é permitida para colaboradores com autorização prévia do Usuário Master (<strong>Giliano Costa</strong>) ou dos administradores.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

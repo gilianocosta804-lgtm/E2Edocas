@@ -77,6 +77,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   const canManageUsers = Boolean(
     currentUser?.isAdmin || currentUser?.isMaster || currentUser?.permissions?.canManageUsers
   );
+  const canMovePackages = Boolean(
+    currentUser?.isAdmin || currentUser?.isMaster || currentUser?.permissions?.canMovePackages
+  );
+  const canUseChat = Boolean(
+    currentUser?.isAdmin || currentUser?.isMaster || currentUser?.permissions?.canUseChat
+  );
+  const canConsultCep = Boolean(
+    currentUser?.isAdmin || currentUser?.isMaster || currentUser?.permissions?.canConsultCep
+  );
 
   // Collaborator's assigned dock status (for quick pause button)
   const myDock = docks.find(
@@ -205,8 +214,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>E2E - DOCAS</span>
                 </button>
 
-                {/* CHAT COLABORADOR <-> ADM */}
-                {onOpenChat && (
+                {/* CHAT COLABORADOR <-> ADM (APENAS COM AUTORIZAÇÃO) */}
+                {canUseChat && onOpenChat && (
                   <button
                     onClick={onOpenChat}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 border border-zinc-800 transition-colors relative"
@@ -222,8 +231,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
                 )}
 
-                {/* CONSULTA DE CEP */}
-                {onOpenCep && (
+                {/* CONSULTA DE CEP (APENAS COM AUTORIZAÇÃO) */}
+                {canConsultCep && onOpenCep && (
                   <button
                     onClick={onOpenCep}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 border border-zinc-800 transition-colors"
@@ -234,8 +243,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
                 )}
 
-                {/* MOVIMENTAR PACOTE */}
-                {onOpenPackageMovement && (
+                {/* MOVIMENTAR PACOTE (APENAS COM AUTORIZAÇÃO) */}
+                {canMovePackages && onOpenPackageMovement && (
                   <button
                     onClick={() => onOpenPackageMovement()}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-300 hover:text-amber-100 hover:bg-amber-950/40 border border-amber-500/30 transition-colors shadow-xs"
@@ -395,22 +404,36 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {/* USER BADGE */}
                 <div className="hidden sm:flex flex-col items-end text-right">
-                  <div className="flex items-center gap-1 text-xs font-medium text-zinc-200">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-100">
                     {currentUser.isMaster ? (
-                      <Crown className="w-3.5 h-3.5 text-amber-400" />
+                      <>
+                        <Crown className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="truncate max-w-[130px] text-amber-200">{currentUser.name}</span>
+                        <span className="text-[9px] font-black uppercase font-mono px-1.5 py-0.2 rounded bg-amber-500 text-zinc-950">
+                          MASTER
+                        </span>
+                      </>
                     ) : currentUser.isAdmin ? (
-                      <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                      <>
+                        <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                        <span className="truncate max-w-[100px]">{currentUser.name.split(' ')[0]}</span>
+                        <span className="text-[9px] font-bold uppercase font-mono px-1 py-0.2 rounded bg-blue-500/20 text-blue-300">
+                          ADM
+                        </span>
+                      </>
                     ) : (
-                      <UserCheck className="w-3.5 h-3.5 text-zinc-400" />
+                      <>
+                        <UserCheck className="w-3.5 h-3.5 text-zinc-400" />
+                        <span className="truncate max-w-[100px]">{currentUser.name.split(' ')[0]}</span>
+                      </>
                     )}
-                    <span className="truncate max-w-[100px]">{currentUser.name.split(' ')[0]}</span>
                   </div>
-                  <span className="text-[10px] text-zinc-400">
+                  <span className="text-[10px] text-zinc-400 font-mono">
                     {currentUser.isMaster
-                      ? 'Master (Google)'
+                      ? currentUser.email || 'gilianocosta804@gmail.com'
                       : currentUser.isAdmin
-                      ? 'Administrador'
-                      : 'Colaborador'}
+                      ? 'Administrador Geral'
+                      : currentUser.assignedDock || 'Colaborador'}
                   </span>
                 </div>
 
@@ -423,13 +446,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={onOpenLogin}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold tracking-wide transition-colors shadow-sm"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Acesso Colaborador / Entrar</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onOpenLogin}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-zinc-950 text-xs font-black tracking-wide transition-all shadow-md cursor-pointer"
+                  title="Entrar com sua conta Gmail (gilianocosta804@gmail.com) como Usuário Master"
+                >
+                  <Crown className="w-3.5 h-3.5 text-zinc-950" />
+                  <span>Entrar com Gmail</span>
+                </button>
+
+                <button
+                  onClick={onOpenLogin}
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-medium border border-zinc-750 transition-colors cursor-pointer"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Colaborador / PIN</span>
+                </button>
+              </div>
             )}
 
             {/* Settings (ONLY FOR ADMINS AND MASTER) */}
@@ -447,22 +481,32 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR (STRICT ROLE VISIBILITY) */}
-      <div className="md:hidden flex items-center justify-around border-t border-zinc-900 bg-zinc-950 px-2 py-2 text-[11px]">
+      <div className="md:hidden flex items-center justify-around border-t border-zinc-900 bg-zinc-950 px-2 py-2 text-[11px] overflow-x-auto">
         {isDriver ? (
-          <div className="w-full flex items-center justify-between px-2 py-1">
-            <span className="text-zinc-300 font-semibold flex items-center gap-1.5 text-xs">
-              <Smartphone className="w-4 h-4 text-emerald-400" />
-              Portal do Motorista
+          <div className="w-full flex items-center justify-between px-2 py-1 gap-2">
+            <span className="text-zinc-300 font-semibold flex items-center gap-1.5 text-xs truncate">
+              <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Portal do Motorista</span>
             </span>
-            <button
-              onClick={onOpenLogin}
-              className="text-xs px-2.5 py-1 rounded bg-zinc-100 text-zinc-950 font-bold"
-            >
-              Acesso Equipe
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={onOpenLogin}
+                className="text-xs px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-zinc-950 font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+              >
+                <Crown className="w-3.5 h-3.5 fill-current" />
+                <span>Gmail Master</span>
+              </button>
+              <button
+                onClick={onOpenLogin}
+                className="text-xs px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 font-medium flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5 text-zinc-400" />
+                <span>PIN</span>
+              </button>
+            </div>
           </div>
         ) : (
-          <>
+          <div className="w-full flex items-center justify-around gap-1 min-w-max">
             <button
               onClick={() => setCurrentTab('dashboard')}
               className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-md ${
@@ -481,7 +525,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Smartphone className="w-4 h-4" />
               <span>E2E - DOCAS</span>
             </button>
-            {onOpenChat && (
+            {canUseChat && onOpenChat && (
               <button
                 onClick={onOpenChat}
                 className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-md text-zinc-400 hover:text-zinc-200 relative"
@@ -493,7 +537,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </button>
             )}
-            {onOpenCep && (
+            {canConsultCep && onOpenCep && (
               <button
                 onClick={onOpenCep}
                 className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-md text-zinc-400 hover:text-zinc-200"
@@ -502,7 +546,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>CEP</span>
               </button>
             )}
-            {onOpenPackageMovement && (
+            {canMovePackages && onOpenPackageMovement && (
               <button
                 onClick={() => onOpenPackageMovement()}
                 className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-md text-amber-400 hover:text-amber-300"
@@ -533,7 +577,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Usuários</span>
               </button>
             )}
-          </>
+          </div>
         )}
       </div>
 

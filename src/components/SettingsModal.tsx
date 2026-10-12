@@ -141,13 +141,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     setBaseName('Condomínio SYS Gama - Ponte Alta (Gama - DF)');
                     setBaseLatitude(-15.9897);
                     setBaseLongitude(-48.0536);
-                    setAllowedRadiusMeters(500);
-                    setEnforceBaseGeofence(true);
+                    setAllowedRadiusMeters(5000);
+                    setEnforceBaseGeofence(false);
                   }}
                   disabled={!isAdmin}
                   className="px-2.5 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 text-[11px] font-semibold flex items-center gap-1 transition-colors"
                 >
-                  <span>Padrão SYS Gama - Ponte Alta (-15.9897, -48.0536)</span>
+                  <span>Padrão SYS Gama - Ponte Alta (5.000m)</span>
                 </button>
 
                 <button

@@ -19,6 +19,7 @@ import {
   fetchSettings,
   updateCollaborator,
   toggleDockPause,
+  loginWithGoogleMaster,
 } from './services/api';
 import { Navbar } from './components/Navbar';
 import { DockCallDashboard } from './components/DockCallDashboard';
@@ -39,14 +40,9 @@ import {
 import { Boxes, X, Volume2 } from 'lucide-react';
 
 export default function App() {
-  const isDriverQuery = typeof window !== 'undefined' && (
-    window.location.search.includes('tab=driver') ||
-    window.location.search.includes('mode=driver')
-  );
-
   const [currentTab, setCurrentTab] = useState<
     'dashboard' | 'driver' | 'sheet' | 'collaborators' | 'settings'
-  >(isDriverQuery ? 'driver' : 'dashboard');
+  >('driver');
 
   // Core Data
   const [checkIns, setCheckIns] = useState<DriverCheckIn[]>([]);
@@ -58,8 +54,8 @@ export default function App() {
     baseName: 'Condomínio SYS Gama - Ponte Alta (Gama - DF)',
     baseLatitude: -15.9897,
     baseLongitude: -48.0536,
-    allowedRadiusMeters: 500,
-    enforceBaseGeofence: true,
+    allowedRadiusMeters: 5000,
+    enforceBaseGeofence: false,
     autoVoiceCall: true,
     soundAlerts: true,
     totalDocks: 10,
@@ -75,8 +71,29 @@ export default function App() {
     },
   });
 
-  // Current Logged-in User
-  const [currentUser, setCurrentUser] = useState<CollaboratorUser | null>(null);
+  // Current Logged-in User (persisted in localStorage)
+  const [currentUser, setCurrentUser] = useState<CollaboratorUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('e2e_current_user');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+
+  // Direct login as Master Giliano Costa with Gmail (1-click)
+  const handleDirectMasterLogin = async () => {
+    try {
+      const res = await loginWithGoogleMaster('gilianocosta804@gmail.com', 'Administração / Geral');
+      try {
+        localStorage.setItem('e2e_current_user', JSON.stringify(res.user));
+      } catch {}
+      setCurrentUser(res.user);
+      setCurrentTab('dashboard');
+    } catch (err) {
+      console.warn('Direct master login fallback:', err);
+      setIsLoginModalOpen(true);
+    }
+  };
 
   // Chat, CEP and Package Movement State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -122,12 +139,24 @@ export default function App() {
       if (checkInsData) setCheckIns(checkInsData);
       if (docksData) setDocks(docksData);
       if (chatData) setChatMessages(chatData);
-      if (collabsData) {
+      if (collabsData && collabsData.length > 0) {
         setCollaborators(collabsData);
-        // Default login as first admin or master if not logged in and not accessing via driver link
-        if (!isDriverQuery) {
-          setCurrentUser(prev => prev || collabsData.find(c => c.isMaster) || collabsData.find(c => c.isAdmin) || collabsData[0] || null);
-        }
+        // Prioritize Master User Giliano Costa (gilianocosta804@gmail.com)
+        const masterUser = collabsData.find(
+          c => c.isMaster || c.role === 'master' || c.email === 'gilianocosta804@gmail.com'
+        ) || collabsData[0];
+
+        setCurrentUser(prev => {
+          if (prev) {
+            // Keep permissions synced for already logged in user
+            const updated = collabsData.find(
+              c => c.id === prev.id || c.email === prev.email || (prev.isMaster && c.isMaster)
+            );
+            return updated || prev;
+          }
+          // Sem auto-login forçado: o visitante vê exclusivamente a Área do Motorista!
+          return null;
+        });
       }
       if (driversData) setRegisteredDrivers(driversData);
       if (activeCallData) setActiveAnnouncement(activeCallData);
@@ -322,9 +351,21 @@ export default function App() {
   const canAccessSpreadsheet = Boolean(
     currentUser?.isAdmin || currentUser?.isMaster || currentUser?.permissions?.canViewSpreadsheet
   );
+  const canManageUsers = Boolean(
+    currentUser?.isAdmin || currentUser?.isMaster || currentUser?.permissions?.canManageUsers
+  );
+  const canMovePackages = Boolean(
+    currentUser?.isAdmin || currentUser?.isMaster || currentUser?.permissions?.canMovePackages
+  );
+  const canUseChat = Boolean(
+    currentUser?.isAdmin || currentUser?.isMaster || currentUser?.permissions?.canUseChat
+  );
+  const canConsultCep = Boolean(
+    currentUser?.isAdmin || currentUser?.isMaster || currentUser?.permissions?.canConsultCep
+  );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-zinc-700 selection:text-white">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-zinc-700 selection:text-white w-full max-w-full overflow-x-hidden">
       {/* Main Top Navigation */}
       <Navbar
         currentTab={currentTab}
@@ -332,71 +373,191 @@ export default function App() {
         currentUser={currentUser}
         onOpenLogin={() => setIsLoginModalOpen(true)}
         onLogout={() => {
+          try {
+            localStorage.removeItem('e2e_current_user');
+          } catch {}
           setCurrentUser(null);
           setCurrentTab('driver');
         }}
         sseConnected={sseConnected}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenSettings={() => {
+          if (currentUser?.isMaster || currentUser?.isAdmin) {
+            setIsSettingsModalOpen(true);
+          }
+        }}
         totalWaiting={totalWaiting}
         docks={docks}
         onChangeDock={handleChangeDock}
         onToggleDockPause={handleToggleDockPause}
-        onOpenChat={() => setIsChatOpen(true)}
-        onOpenCep={() => setIsCepModalOpen(true)}
+        onOpenChat={() => {
+          if (!currentUser) {
+            setIsLoginModalOpen(true);
+            return;
+          }
+          if (!canUseChat) {
+            alert('Apenas colaboradores com autorização prévia da administração podem acessar o Chat.');
+            return;
+          }
+          setIsChatOpen(true);
+        }}
+        onOpenCep={() => {
+          if (!currentUser) {
+            setIsLoginModalOpen(true);
+            return;
+          }
+          if (!canConsultCep) {
+            alert('Apenas colaboradores com autorização prévia podem acessar a Consulta de CEP.');
+            return;
+          }
+          setIsCepModalOpen(true);
+        }}
         onOpenPackageMovement={(source?: string) => {
+          if (!currentUser) {
+            setIsLoginModalOpen(true);
+            return;
+          }
+          if (!canMovePackages) {
+            alert('A movimentação de pacotes requer autorização prévia do Usuário Master ou Administrativo.');
+            return;
+          }
           setPackageMovementSourceRoute(source || '');
           setIsPackageModalOpen(true);
         }}
         unreadChatCount={chatMessages.length}
       />
 
-      {/* Main View Router */}
-      <main className="flex-1 pb-16">
-        {currentTab === 'dashboard' && (
-          <DockCallDashboard
-            checkIns={checkIns}
-            docks={docks}
-            baseSettings={baseSettings}
-            activeAnnouncement={activeAnnouncement}
-            currentUser={currentUser}
-            onRefresh={loadInitialData}
-            onOpenCheckIn={() => setCurrentTab('driver')}
-            onOpenChat={() => setIsChatOpen(true)}
-            onOpenCep={() => setIsCepModalOpen(true)}
-            onOpenPackageMovement={(source?: string) => {
-              setPackageMovementSourceRoute(source || '');
-              setIsPackageModalOpen(true);
-            }}
-          />
-        )}
+      {/* Main View Router - ENQUADRADO PARA VERSÃO MOBILE */}
+      <main className="flex-1 pb-20 w-full max-w-full overflow-x-hidden">
+        {!currentUser ? (
+          /* QUANDO NÃO HOUVER LOGIN: MOSTRA EXCLUSIVAMENTE A ÁREA DO MOTORISTA */
+          <div className="w-full max-w-3xl mx-auto px-2 sm:px-4">
+            <DriverPortal
+              checkIns={checkIns}
+              baseSettings={baseSettings}
+              activeAnnouncement={activeAnnouncement}
+              onRefresh={loadInitialData}
+              registeredDrivers={registeredDrivers}
+              currentUser={currentUser}
+              onOpenLogin={() => setIsLoginModalOpen(true)}
+              onOpenPackageMovement={(source?: string) => {
+                setIsLoginModalOpen(true);
+              }}
+              onOpenCep={() => {
+                setIsLoginModalOpen(true);
+              }}
+              onLoginAsMaster={handleDirectMasterLogin}
+              onSwitchTab={tab => {
+                setIsLoginModalOpen(true);
+              }}
+            />
+          </div>
+        ) : (
+          /* SÓ MOSTRA O RESTANTE DEPOIS QUE FOR FEITO LOGIN */
+          <div className="w-full max-w-7xl mx-auto px-2 sm:px-4">
+            {currentTab === 'dashboard' && (
+              <DockCallDashboard
+                checkIns={checkIns}
+                docks={docks}
+                baseSettings={baseSettings}
+                activeAnnouncement={activeAnnouncement}
+                currentUser={currentUser}
+                onRefresh={loadInitialData}
+                onOpenCheckIn={() => setCurrentTab('driver')}
+                onOpenChat={() => {
+                  if (canUseChat) setIsChatOpen(true);
+                }}
+                onOpenCep={() => {
+                  if (canConsultCep) setIsCepModalOpen(true);
+                }}
+                onOpenPackageMovement={(source?: string) => {
+                  if (canMovePackages) {
+                    setPackageMovementSourceRoute(source || '');
+                    setIsPackageModalOpen(true);
+                  }
+                }}
+              />
+            )}
 
-        {currentTab === 'driver' && (
-          <DriverPortal
-            checkIns={checkIns}
-            baseSettings={baseSettings}
-            activeAnnouncement={activeAnnouncement}
-            onRefresh={loadInitialData}
-            registeredDrivers={registeredDrivers}
-          />
-        )}
+            {currentTab === 'driver' && (
+              <div className="max-w-3xl mx-auto">
+                <DriverPortal
+                  checkIns={checkIns}
+                  baseSettings={baseSettings}
+                  activeAnnouncement={activeAnnouncement}
+                  onRefresh={loadInitialData}
+                  registeredDrivers={registeredDrivers}
+                  currentUser={currentUser}
+                  onOpenLogin={() => setIsLoginModalOpen(true)}
+                  onOpenPackageMovement={(source?: string) => {
+                    if (canMovePackages) {
+                      setPackageMovementSourceRoute(source || '');
+                      setIsPackageModalOpen(true);
+                    }
+                  }}
+                  onOpenCep={() => {
+                    if (canConsultCep) setIsCepModalOpen(true);
+                  }}
+                  onLoginAsMaster={handleDirectMasterLogin}
+                  onSwitchTab={setCurrentTab}
+                />
+              </div>
+            )}
 
-        {currentTab === 'sheet' && (
-          <DailySpreadsheet
-            currentCheckIns={checkIns}
-            onRefresh={loadInitialData}
-            isAdmin={canAccessSpreadsheet}
-          />
-        )}
+            {currentTab === 'sheet' && (
+              canAccessSpreadsheet ? (
+                <DailySpreadsheet
+                  currentCheckIns={checkIns}
+                  onRefresh={loadInitialData}
+                  isAdmin={canAccessSpreadsheet}
+                />
+              ) : (
+                <div className="max-w-md mx-auto px-4 py-16 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 mx-auto">
+                    🔒
+                  </div>
+                  <h3 className="text-base font-bold text-white">Acesso à Planilha Restrito</h3>
+                  <p className="text-xs text-zinc-400">
+                    A visualização da planilha diária requer autorização prévia concedida pelo Usuário Master (<strong>Giliano Costa</strong>) ou Administradores.
+                  </p>
+                  <button
+                    onClick={() => setCurrentTab('dashboard')}
+                    className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold"
+                  >
+                    Voltar ao Painel
+                  </button>
+                </div>
+              )
+            )}
 
-        {currentTab === 'collaborators' && (
-          <CollaboratorsSheet
-            collaborators={collaborators}
-            currentUser={currentUser}
-            onRefresh={loadInitialData}
-            onSelectUser={user => {
-              setCurrentUser(user);
-            }}
-          />
+            {currentTab === 'collaborators' && (
+              canManageUsers ? (
+                <CollaboratorsSheet
+                  collaborators={collaborators}
+                  currentUser={currentUser}
+                  onRefresh={loadInitialData}
+                  onSelectUser={user => {
+                    setCurrentUser(user);
+                  }}
+                />
+              ) : (
+                <div className="max-w-md mx-auto px-4 py-16 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 mx-auto">
+                    🔒
+                  </div>
+                  <h3 className="text-base font-bold text-white">Gestão Restrita de Usuários</h3>
+                  <p className="text-xs text-zinc-400">
+                    A tela de gestão de colaboradores e controle de permissões é restrita aos Administradores e ao Usuário Master.
+                  </p>
+                  <button
+                    onClick={() => setCurrentTab('dashboard')}
+                    className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold"
+                  >
+                    Voltar ao Painel
+                  </button>
+                </div>
+              )
+            )}
+          </div>
         )}
       </main>
 
@@ -405,25 +566,35 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-zinc-300">E2E - DOCAS</span>
-            <span>&bull; Gestão de Chamada Mobile, Conferência de Coleta &amp; Planilhas</span>
+            <span>&bull; Gestão Mobile de Chamada de Docas &amp; Expedição</span>
           </div>
-          <div className="flex items-center gap-3 text-[11px] text-zinc-400">
-            <button
-              onClick={() => setIsSettingsModalOpen(true)}
-              className="hover:text-zinc-200 transition-colors"
-            >
-              Configurações GPS ({baseSettings.allowedRadiusMeters}m)
-            </button>
-            <span>&bull;</span>
-            <button
-              onClick={() => setIsCepModalOpen(true)}
-              className="hover:text-zinc-200 transition-colors"
-            >
-              Consultar CEP (ViaCEP)
-            </button>
-            <span>&bull;</span>
-            <span>Google Sheets Master: {baseSettings.masterGoogle?.email || 'gilianocosta804@gmail.com'}</span>
-          </div>
+          {currentUser && (
+            <div className="flex items-center gap-3 text-[11px] text-zinc-400">
+              {(currentUser.isMaster || currentUser.isAdmin) && (
+                <>
+                  <button
+                    onClick={() => setIsSettingsModalOpen(true)}
+                    className="hover:text-zinc-200 transition-colors"
+                  >
+                    Configurações GPS ({baseSettings.allowedRadiusMeters}m)
+                  </button>
+                  <span>&bull;</span>
+                </>
+              )}
+              {canConsultCep && (
+                <>
+                  <button
+                    onClick={() => setIsCepModalOpen(true)}
+                    className="hover:text-zinc-200 transition-colors"
+                  >
+                    Consultar CEP
+                  </button>
+                  <span>&bull;</span>
+                </>
+              )}
+              <span>Google Sheets Master: {baseSettings.masterGoogle?.email || 'gilianocosta804@gmail.com'}</span>
+            </div>
+          )}
         </div>
       </footer>
 

@@ -65,11 +65,14 @@ export type UserRole =
   | 'colaborador';  // Colaboradores de Doca / Coleta (até 50+)
 
 export interface UserPermissions {
-  canViewSpreadsheet: boolean;  // Apenas Admins e Master
+  canViewSpreadsheet: boolean;  // Apenas Admins e Master (ou autorizado)
   canManageUsers: boolean;      // Criar e limitar usuários
   canCallDrivers: boolean;      // Chamar motoristas para a doca
   canCollectPackages: boolean;  // Registrar quantidade de pacotes e isca
   canConfigureDocks: boolean;   // Criar ou excluir docas
+  canMovePackages?: boolean;    // Fazer todas as movimentações de pacotes entre rotas
+  canUseChat?: boolean;         // Usar chat em tempo real com ADM
+  canConsultCep?: boolean;      // Realizar consulta oficial de CEP
 }
 
 export interface CollaboratorUser {

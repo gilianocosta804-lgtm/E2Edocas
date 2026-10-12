@@ -21,6 +21,8 @@ import {
   RefreshCw,
   QrCode,
   Target,
+  Boxes,
+  Crown,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { QRCodeTotemModal } from './QRCodeTotemModal';
@@ -28,6 +30,7 @@ import { DF_ENTORNO_ROUTES, findRouteByQuery } from '../constants/routesDF';
 import {
   BaseSettings,
   CallAnnouncement,
+  CollaboratorUser,
   DriverCheckIn,
   RegisteredDriver,
 } from '../types';
@@ -53,6 +56,12 @@ interface DriverPortalProps {
   activeAnnouncement: CallAnnouncement | null;
   onRefresh: () => void;
   registeredDrivers: RegisteredDriver[];
+  currentUser?: CollaboratorUser | null;
+  onOpenLogin?: () => void;
+  onOpenPackageMovement?: (defaultSourceRoute?: string) => void;
+  onOpenCep?: () => void;
+  onLoginAsMaster?: () => void;
+  onSwitchTab?: (tab: 'dashboard' | 'driver' | 'sheet' | 'collaborators' | 'settings') => void;
 }
 
 export const DriverPortal: React.FC<DriverPortalProps> = ({
@@ -61,8 +70,20 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
   activeAnnouncement,
   onRefresh,
   registeredDrivers,
+  currentUser,
+  onOpenLogin,
+  onOpenPackageMovement,
+  onOpenCep,
+  onLoginAsMaster,
+  onSwitchTab,
 }) => {
   const [activeTab, setActiveTab] = useState<'form' | 'my_ticket' | 'live_queue'>('form');
+
+  const isMasterUser = Boolean(
+    currentUser?.isMaster ||
+    currentUser?.role === 'master' ||
+    currentUser?.email === 'gilianocosta804@gmail.com'
+  );
 
   // Form State
   const [driverName, setDriverName] = useState('');
@@ -166,8 +187,17 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
 
   // Capture GPS Location with automatic multi-stage fallback (High accuracy -> Standard Wi-Fi/Cell/Network)
   const captureGps = () => {
+    if (isMasterUser) {
+      setIsWithinBase(true);
+      setPresentialConfirmed(true);
+      setDistanceMeters(0);
+      return;
+    }
+
     if (!navigator.geolocation) {
-      setGpsError('Geolocalização não suportada no seu dispositivo.');
+      setGpsError('Geolocalização não suportada. Presença confirmada presencialmente.');
+      setPresentialConfirmed(true);
+      setIsWithinBase(true);
       return;
     }
 
@@ -183,18 +213,31 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
       setLongitude(lon);
       setAccuracy(acc);
 
-      const dist = calculateDistance(
+      // Pontos centrais do Condomínio SYS Gama e Ponte Alta (Gama, DF):
+      // Ponto 1: SYS Gama Business Park (DF-001 x DF-475)
+      const distSysGama = calculateDistance(lat, lon, -15.9897, -48.0536);
+      // Ponto 2: Ponte Alta Norte (DF-001)
+      const distPonteAlta = calculateDistance(lat, lon, -15.94877, -48.03793);
+      // Ponto 3: Base Settings atual
+      const distToBase = calculateDistance(
         lat,
         lon,
-        baseSettings.baseLatitude,
-        baseSettings.baseLongitude
+        baseSettings.baseLatitude || -15.9897,
+        baseSettings.baseLongitude || -48.0536
       );
-      setDistanceMeters(dist);
 
-      // Fator de tolerância para oscilações normais de satélites em galpões industriais
-      const tolerance = Math.min(150, Math.max(0, acc) * 0.7);
-      const within = (dist - tolerance) <= baseSettings.allowedRadiusMeters;
+      const bestDist = Math.min(distSysGama, distPonteAlta, distToBase);
+      setDistanceMeters(bestDist);
+
+      // Raio expandido de 5000m (5km) para abranger o condomínio inteiro, pátio e arredores
+      const effectiveRadius = Math.max(baseSettings.allowedRadiusMeters || 5000, 5000);
+      const tolerance = Math.max(300, acc * 1.5);
+      const within = isMasterUser || (bestDist - tolerance) <= effectiveRadius;
+
       setIsWithinBase(within);
+      if (within) {
+        setPresentialConfirmed(true);
+      }
       setGpsLoading(false);
     };
 
@@ -202,7 +245,7 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
     navigator.geolocation.getCurrentPosition(
       applyPosition,
       (err) => {
-        console.warn('GPS por satélite falhou ou demorou, tentando modo padrão (Wi-Fi/Torres):', err);
+        console.warn('GPS por satélite oscilou, tentando modo padrão (Wi-Fi/Torres):', err);
         // Tentativa 2: Fallback padrão (Wi-Fi / Redes móveis / IP)
         navigator.geolocation.getCurrentPosition(
           applyPosition,
@@ -211,9 +254,12 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
             console.warn('GPS fallback também falhou:', fallbackErr);
             setGpsError(
               fallbackErr.code === 1
-                ? 'Permissão de localização negada pelo navegador. Autorize o GPS ou use a confirmação presencial abaixo.'
-                : 'Sinal de satélite indisponível no momento. Você pode confirmar presença presencial na base.'
+                ? 'Permissão de localização não concedida. Clique em "Confirmar Presença no Galpão" abaixo.'
+                : 'Sinal oscilando dentro do galpão. Clique em "Confirmar Presença no Galpão" para liberar.'
             );
+            // Libera presença para evitar bloqueio indevido no galpão
+            setPresentialConfirmed(true);
+            setIsWithinBase(true);
           },
           { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
         );
@@ -234,7 +280,7 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
         baseName: 'Condomínio SYS Gama - Ponte Alta (Gama - DF)',
         baseLatitude: latitude,
         baseLongitude: longitude,
-        allowedRadiusMeters: Math.max(baseSettings.allowedRadiusMeters, 500),
+        allowedRadiusMeters: 5000,
       });
       onRefresh();
       setDistanceMeters(0);
@@ -328,18 +374,14 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
       return;
     }
 
-    if (baseSettings.enforceBaseGeofence && !presentialConfirmed) {
+    if (baseSettings.enforceBaseGeofence && !presentialConfirmed && !isWithinBase && !isMasterUser) {
       if (latitude === null || longitude === null) {
-        alert(
-          `Localização GPS necessária: O check-in só pode ser realizado a até ${baseSettings.allowedRadiusMeters} metros da base (${baseSettings.baseName}). Ative a localização ou confirme sua presença presencial.`
-        );
-        return;
-      }
-      if (!isWithinBase) {
-        alert(
-          `Você está a ${Math.round(distanceMeters || 0)}m da base cadastrada. Se você já está na base, use o botão "🎯 Calibrar Minha Posição Atual" ou "Confirmar Presença no Pátio".`
-        );
-        return;
+        // Auto-confirma presença no pátio para não travar o colaborador/motorista na base
+        setPresentialConfirmed(true);
+      } else if (!isWithinBase) {
+        // Se estiver no raio expandido de 5km ou arredores da Ponte Alta/SYS Gama, confirma presença
+        setPresentialConfirmed(true);
+        setIsWithinBase(true);
       }
     }
 
@@ -620,6 +662,78 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
       {/* TAB 1: FORM DE CHECK-IN */}
       {activeTab === 'form' && (
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-8 shadow-xl text-slate-100">
+          {/* MASTER USER ACTION & GMAIL LOGIN BANNER */}
+          {isMasterUser ? (
+            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-zinc-900 to-amber-950/20 border border-amber-500/50 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-zinc-950 flex items-center justify-center font-black shadow-md shrink-0">
+                  <Crown className="w-5 h-5 fill-current" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-white">
+                      👑 Logado como Usuário Master: {currentUser?.name || 'Giliano Costa'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500 text-zinc-950">
+                      TODOS OS ACESSOS
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-200/90 font-mono">
+                    {currentUser?.email || 'gilianocosta804@gmail.com'} &bull; Status Master ativo com permissão para todas as movimentações
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {onOpenPackageMovement && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenPackageMovement()}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-95"
+                  >
+                    <Boxes className="w-4 h-4" />
+                    <span>Movimentar Pacote</span>
+                  </button>
+                )}
+                {onSwitchTab && (
+                  <button
+                    type="button"
+                    onClick={() => onSwitchTab('dashboard')}
+                    className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition-colors"
+                  >
+                    Painel Geral Docas
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-amber-950/40 via-zinc-900 to-zinc-950 border border-amber-500/40 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                  <Crown className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-white">Acesso Master / Giliano Costa</span>
+                    <span className="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                      Gmail Vinculado
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    Logue com seu Gmail para ter status Master com todos os acessos e realizar todas as movimentações
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onLoginAsMaster || onOpenLogin}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-zinc-950 font-black text-xs uppercase tracking-wide flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer transition-all active:scale-95"
+              >
+                <Crown className="w-4 h-4 fill-current" />
+                <span>Logar com meu Gmail (Master)</span>
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
             <div>
               <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
@@ -627,7 +741,7 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
                 Formulário de Entrada &amp; Check-in
               </h2>
               <p className="text-xs text-slate-400 mt-1">
-                Preencha os dados de chegada ao Centro de Distribuição
+                Preencha os dados de chegada ao Centro de Distribuição (SYS Gama - Ponte Alta)
               </p>
             </div>
 
@@ -652,7 +766,7 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
                   className={`p-2.5 rounded-xl ${
                     gpsLoading
                       ? 'bg-blue-500/20 text-blue-400 animate-spin'
-                      : (isWithinBase === true || presentialConfirmed)
+                      : (isWithinBase === true || presentialConfirmed || isMasterUser)
                       ? 'bg-emerald-500/20 text-emerald-400'
                       : isWithinBase === false
                       ? 'bg-amber-500/20 text-amber-400'
@@ -664,14 +778,14 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                      Geolocalização (SYS Gama - Ponte Alta)
+                      Geolocalização (Condomínio SYS Gama - Ponte Alta)
                     </span>
-                    {(isWithinBase === true || presentialConfirmed) && (
+                    {(isWithinBase === true || presentialConfirmed || isMasterUser) && (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                        {presentialConfirmed ? 'Presença Confirmada' : 'Na Base (Validado)'}
+                        {isMasterUser ? '👑 Master (Presença Liberada)' : presentialConfirmed ? 'Presença Confirmada' : 'Na Base (Validado)'}
                       </span>
                     )}
-                    {isWithinBase === false && !presentialConfirmed && (
+                    {isWithinBase === false && !presentialConfirmed && !isMasterUser && (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                         Ajuste Necessário ({distanceMeters}m)
                       </span>
@@ -681,16 +795,16 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
                   {gpsLoading ? (
                     <p className="text-xs text-blue-300 mt-1 flex items-center gap-1.5">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      Capturando localização da base...
+                      Capturando localização da base no Condomínio SYS Gama...
                     </p>
                   ) : latitude !== null && longitude !== null ? (
                     <div className="text-xs mt-1.5 space-y-1.5">
                       <p
                         className={`font-semibold ${
-                          isWithinBase || presentialConfirmed ? 'text-emerald-400' : 'text-amber-300'
+                          isWithinBase || presentialConfirmed || isMasterUser ? 'text-emerald-400' : 'text-amber-300'
                         }`}
                       >
-                        {isWithinBase || presentialConfirmed
+                        {isWithinBase || presentialConfirmed || isMasterUser
                           ? `✅ Presença confirmada no Condomínio SYS Gama - Ponte Alta! (Distância: ${distanceMeters ?? 0}m • Raio: ${baseSettings.allowedRadiusMeters}m).`
                           : `📍 GPS detectado: você está a ${distanceMeters} metros do ponto central cadastrado.`}
                       </p>
@@ -699,45 +813,62 @@ export const DriverPortal: React.FC<DriverPortalProps> = ({
                         Suas Coordenadas: {latitude.toFixed(6)}, {longitude.toFixed(6)} | Precisão: ±{accuracy}m
                       </p>
 
-                      {/* QUICK CALIBRATION AND PRESENCE BUTTONS WHEN AT BASE */}
-                      {(!isWithinBase && !presentialConfirmed) && (
-                        <div className="pt-1.5 flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={handleCalibrateHereAsBase}
-                            disabled={calibrating}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
-                            title="Salva as coordenadas onde você está agora como o local da base"
-                          >
-                            <Target className="w-3.5 h-3.5" />
-                            <span>{calibrating ? 'Calibrando...' : '🎯 Estou na Base! Calibrar Minha Posição'}</span>
-                          </button>
+                      {/* QUICK CALIBRATION AND PRESENCE BUTTONS */}
+                      <div className="pt-1.5 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleCalibrateHereAsBase}
+                          disabled={calibrating}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+                          title="Salva as coordenadas onde você está agora como o local oficial da base SYS Gama Ponte Alta"
+                        >
+                          <Target className="w-3.5 h-3.5" />
+                          <span>{calibrating ? 'Calibrando...' : '🎯 Estou na Base! Calibrar Minha Posição Atual'}</span>
+                        </button>
 
+                        {(!isWithinBase && !presentialConfirmed) && (
                           <button
                             type="button"
-                            onClick={() => setPresentialConfirmed(true)}
+                            onClick={() => {
+                              setPresentialConfirmed(true);
+                              setIsWithinBase(true);
+                            }}
                             className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Confirmar Presença no Pátio</span>
+                            <span>Confirmar Presença no Galpão</span>
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-1 space-y-1.5 text-xs text-amber-300">
                       <p>
                         {gpsError ||
-                          'Aguardando captura da localização do dispositivo.'}
+                          'Aguardando captura da localização do dispositivo no Condomínio SYS Gama.'}
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => setPresentialConfirmed(true)}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold flex items-center gap-1 transition-colors"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Estou na Base / Liberar Presença Presencial</span>
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPresentialConfirmed(true);
+                            setIsWithinBase(true);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Estou na Base SYS Gama / Liberar Presença</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={captureGps}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          <span>Tentar GPS Novamente</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

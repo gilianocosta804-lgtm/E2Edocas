@@ -3,8 +3,8 @@
     "baseName": "Condomínio SYS Gama - Ponte Alta (Gama - DF)",
     "baseLatitude": -15.9897,
     "baseLongitude": -48.0536,
-    "allowedRadiusMeters": 500,
-    "enforceBaseGeofence": true,
+    "allowedRadiusMeters": 5000,
+    "enforceBaseGeofence": false,
     "autoVoiceCall": true,
     "voiceGender": "female",
     "soundAlerts": true,
@@ -12,15 +12,37 @@
     "masterGoogle": {
       "connected": true,
       "email": "gilianocosta804@gmail.com",
-      "spreadsheetId": "e2e_docas_sheets_2026_10_10",
-      "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1E2E_Docas_2026-10-10",
-      "formId": "e2e_docas_form_2026-10-10",
-      "formUrl": "https://docs.google.com/forms/d/1E2E_Docas_Form_2026-10-10",
+      "spreadsheetId": "e2e_docas_sheets_2026_10_12",
+      "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1E2E_Docas_2026-10-12",
+      "formId": "e2e_docas_form_2026-10-12",
+      "formUrl": "https://docs.google.com/forms/d/1E2E_Docas_Form_2026-10-12",
       "autoSync": true,
-      "lastSyncAt": "2026-10-10T04:25:02.732Z"
+      "lastSyncAt": "2026-10-12T07:28:19.981Z"
     }
   },
   "collaborators": [
+    {
+      "id": "collab-master-giliano",
+      "name": "Giliano Costa",
+      "username": "gilianocosta804@gmail.com",
+      "role": "master",
+      "isAdmin": true,
+      "isMaster": true,
+      "pin": "415263",
+      "email": "gilianocosta804@gmail.com",
+      "active": true,
+      "assignedDock": "Administração / Geral",
+      "permissions": {
+        "canViewSpreadsheet": true,
+        "canManageUsers": true,
+        "canCallDrivers": true,
+        "canCollectPackages": true,
+        "canConfigureDocks": true,
+        "canMovePackages": true
+      },
+      "createdAt": "2026-01-01",
+      "lastLogin": "2026-10-12T07:28:19.981Z"
+    },
     {
       "id": "collab-1",
       "name": "Carlos Eduardo Santos",
@@ -545,7 +567,41 @@
         "notes": ""
       }
     ],
-    "2026-10-12": []
+    "2026-10-12": [
+      {
+        "id": "chk-1791781826881-736",
+        "ticketNumber": 1,
+        "driverName": "Diogo Nogueira",
+        "licensePlate": "BSB3456",
+        "phoneNumber": "61982137014",
+        "route": "18B",
+        "city": "Samambaia",
+        "arrivalDate": "2026-10-12",
+        "arrivalTime": "05:10:26",
+        "timestamp": 1791781826880,
+        "isPriority": false,
+        "latitude": -15.9487747,
+        "longitude": -48.037939,
+        "locationAccuracy": 11,
+        "distanceToBaseMeters": 0,
+        "isWithinBase": true,
+        "locationStatus": "validated_base",
+        "status": "waiting",
+        "assignedDock": null,
+        "calledAt": null,
+        "dockEnteredAt": null,
+        "completedAt": null,
+        "callCount": 0,
+        "isManualRegistration": true,
+        "packageCount": null,
+        "iscaNumber": null,
+        "collectorName": null,
+        "collectorDock": null,
+        "collectedAt": null,
+        "notes": "",
+        "driverAcknowledgedAt": "2026-10-12T05:10:42.179Z"
+      }
+    ]
   },
   "activeCallAnnouncement": {
     "id": "chk-1791604960228-272",
@@ -595,9 +651,33 @@
       "timestamp": 1791778521685,
       "createdAtFormatted": "04:15:21",
       "isUrgent": true
+    },
+    {
+      "id": "msg-1791790106660-993",
+      "senderId": "sistema-pacotes",
+      "senderName": "Giliano Costa",
+      "senderRole": "colaborador",
+      "senderDock": null,
+      "targetDock": null,
+      "content": "📦 [ALERTA DE MOVIMENTAÇÃO] 2 pacote(s) adicionado(s) para a rota 16A! Observação: \"Pacote urgente adicionado pelo Master Giliano\"",
+      "timestamp": 1791790106660,
+      "createdAtFormatted": "07:28:26",
+      "isUrgent": true
     }
   ],
   "packageMovements": [
+    {
+      "id": "mov-1791790106660-53",
+      "sourceRoute": "EXPEDIÇÃO",
+      "targetRoute": "16A",
+      "packageCount": 2,
+      "trackingCode": null,
+      "notes": "Pacote urgente adicionado pelo Master Giliano",
+      "collaboratorName": "Giliano Costa",
+      "collaboratorDock": null,
+      "timestamp": 1791790106660,
+      "createdAtFormatted": "07:28:26"
+    },
     {
       "id": "mov-1791778521685-107",
       "sourceRoute": "DOCA 02",
